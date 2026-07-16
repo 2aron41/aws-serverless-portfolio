@@ -28,3 +28,18 @@ This repository will contain a serverless portfolio application built using Pyth
 This project will demonstrate my ability to design, deploy, and document a practical serverless application in AWS.
 
 Development will begin after I complete the required cloud, Linux, Python, and Git foundations.
+
+## Deployment Status
+
+Current status: Live on AWS through CloudFront.
+
+Current deployment method:
+
+- Manual upload to private S3 bucket
+- Manual CloudFront invalidation
+- Direct S3 access blocked
+- HTTPS served through CloudFront
+
+Next deployment improvement:
+
+- GitHub Actions CI/CD using AWS OIDC and least-privilege permissions
