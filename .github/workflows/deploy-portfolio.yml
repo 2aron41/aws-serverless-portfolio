@@ -2,6 +2,12 @@ name: Deploy Portfolio to AWS
 
 on:
   workflow_dispatch:
+    inputs:
+      run_failure_test:
+        description: "Fail safely before AWS deployment"
+        required: true
+        default: false
+        type: boolean
 
 permissions:
   id-token: write
@@ -39,6 +45,14 @@ jobs:
           fi
 
           echo "PASS: Deployment is running from main."
+
+      - name: Controlled failure exercise
+        if: ${{ inputs.run_failure_test }}
+        shell: bash
+        run: |
+          echo "::error::Intentional Day 8 failure test."
+          echo "PASS: Workflow stopped before AWS authentication or deployment."
+          exit 1
 
       - name: Check out repository
         uses: actions/checkout@v7
