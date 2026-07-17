@@ -1,0 +1,53 @@
+name: AWS OIDC Authentication Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  authenticate:
+    name: Assume AWS deployment role
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::510497448584:role/GitHubActions-AWSServerlessPortfolio-DeployRole
+          role-session-name: GitHubActions-OIDC-Test-${{ github.run_id }}
+          aws-region: us-east-1
+          allowed-account-ids: "510497448584"
+
+      - name: Verify assumed AWS identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ACCOUNT_ID="$(aws sts get-caller-identity \
+            --query Account \
+            --output text)"
+
+          ASSUMED_ARN="$(aws sts get-caller-identity \
+            --query Arn \
+            --output text)"
+
+          echo "AWS account: ${ACCOUNT_ID}"
+          echo "Assumed identity: ${ASSUMED_ARN}"
+
+          if [ "${ACCOUNT_ID}" != "510497448584" ]; then
+            echo "::error::Unexpected AWS account: ${ACCOUNT_ID}"
+            exit 1
+          fi
+
+          case "${ASSUMED_ARN}" in
+            *":assumed-role/GitHubActions-AWSServerlessPortfolio-DeployRole/"*)
+              echo "PASS: GitHub successfully assumed the expected deployment role."
+              ;;
+            *)
+              echo "::error::Unexpected assumed identity: ${ASSUMED_ARN}"
+              exit 1
+              ;;
+          esac
