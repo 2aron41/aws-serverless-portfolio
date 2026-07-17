@@ -1,45 +1,37 @@
 # AWS Serverless Portfolio
 
-> **Status: Planned Project**
+> **Status: Live on AWS with secure GitHub Actions deployment**
 
-This repository will contain a serverless portfolio application built using Python and Amazon Web Services.
+This repository contains the live frontend foundation for an AWS serverless portfolio project.
 
-## Planned Features
+The website is stored in a private Amazon S3 bucket, delivered through Amazon CloudFront over HTTPS, and deployed through GitHub Actions using AWS OpenID Connect.
 
-* Serverless backend
-* Cloud-hosted portfolio content
-* API endpoints
-* Database integration
-* Monitoring and logging
-* Automated deployment
+## Live Site
 
-## Planned Technologies
+- CloudFront website: https://d1wnw5kep14m5j.cloudfront.net
+- Source repository: `2aron41/aws-serverless-portfolio`
 
-* Python
-* AWS Lambda
-* Amazon API Gateway
-* Amazon DynamoDB
-* Amazon S3
-* Amazon CloudWatch
-* GitHub Actions
+## Current Architecture
 
-## Purpose
-
-This project will demonstrate my ability to design, deploy, and document a practical serverless application in AWS.
-
-Development will begin after I complete the required cloud, Linux, Python, and Git foundations.
-
-## Deployment Status
-
-Current status: Live on AWS through CloudFront.
-
-Current deployment method:
-
-- Manual upload to private S3 bucket
-- Manual CloudFront invalidation
-- Direct S3 access blocked
-- HTTPS served through CloudFront
-
-Next deployment improvement:
-
-- GitHub Actions CI/CD using AWS OIDC and least-privilege permissions
+```text
+Developer
+    |
+    | Approved repository changes
+    v
+GitHub Actions
+    |
+    | OIDC identity token
+    v
+Least-privilege AWS IAM role
+    |
+    | Temporary AWS credentials
+    v
+Private Amazon S3 bucket
+    |
+    | Origin Access Control
+    v
+Amazon CloudFront
+    |
+    | HTTPS
+    v
+Website visitor

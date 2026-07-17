@@ -177,3 +177,101 @@ If a deployment or validation step fails:
 - How should the workflow verify that direct S3 access remains blocked?
 - Which GitHub Actions versions or commit SHAs should be approved?
 - Should branch protection be enabled before live automated deployment?
+
+---
+
+---
+
+## Implementation Status — July 16, 2026
+
+**Status: Completed**
+
+The secure GitHub Actions deployment plan was implemented and validated.
+
+## Implemented AWS Identity Configuration
+
+- GitHub OIDC provider created in AWS IAM
+- Audience configured as `sts.amazonaws.com`
+- Deployment role:
+  - `GitHubActions-AWSServerlessPortfolio-DeployRole`
+- Permissions policy:
+  - `GitHubActions-AWSServerlessPortfolio-DeployPolicy`
+- Trust policy restricted to:
+  - Repository: `2aron41/aws-serverless-portfolio`
+  - Branch: `main`
+
+## Implemented Workflows
+
+- `.github/workflows/aws-oidc-test.yml`
+- `.github/workflows/deploy-portfolio.yml`
+
+## Final Trigger Decision
+
+The production workflow currently uses `workflow_dispatch`.
+
+This keeps deployment manually controlled while the pipeline matures. Automatic deployment can be considered after branch protection or a protected GitHub environment is configured.
+
+## Final S3 Synchronization Decision
+
+The workflow uses:
+
+```bash
+aws s3 sync website/ s3://2aron41-aws-portfolio-20260713/ --delete
+```
+
+Deletion was approved after implementing:
+
+- Required-file validation
+- Exact source and destination restrictions
+- A synchronization dry run
+- Least-privilege object permissions
+- Post-deployment S3 object checks
+- Live-file comparison through CloudFront
+
+## Final CloudFront Decision
+
+The workflow invalidates:
+
+```text
+/*
+```
+
+It waits until the invalidation completes before checking the live website.
+
+## Final Verification
+
+The workflow confirms:
+
+- The expected AWS account and assumed IAM role
+- Required S3 objects exist
+- CloudFront returns `HTTP 200`
+- Live HTML and CSS match the repository
+- Direct S3 access returns `HTTP 403`
+
+## Controlled Failure and Recovery
+
+The `run_failure_test` input intentionally stops the workflow before AWS authentication.
+
+Results:
+
+- Controlled failure: Expected failure
+- AWS authentication and deployment: Skipped
+- Recovery deployment: Success
+- Live website after recovery: Verified
+
+## Implementation Evidence
+
+- Full evidence: `docs/deployment-evidence-2026-07-16.md`
+- OIDC test commit: `b49ed1b`
+- Initial deployment commit: `a7997f5`
+- Failure-test commit: `2e1493f`
+
+## Remaining Hardening Opportunities
+
+- Add a protected GitHub production environment.
+- Require production deployment approval.
+- Add branch protection to `main`.
+- Pin third-party actions to immutable commit SHAs.
+- Add CloudTrail and CloudWatch monitoring.
+- Evaluate selective CloudFront invalidations.
+- Manage IAM, S3, and CloudFront through Terraform.
