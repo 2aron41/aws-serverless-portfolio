@@ -1,0 +1,255 @@
+name: Deploy Portfolio to AWS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: aws-portfolio-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "510497448584"
+  AWS_ROLE_ARN: arn:aws:iam::510497448584:role/GitHubActions-AWSServerlessPortfolio-DeployRole
+  S3_BUCKET: 2aron41-aws-portfolio-20260713
+  CLOUDFRONT_DISTRIBUTION_ID: EUWNERX790PYN
+  CLOUDFRONT_URL: https://d1wnw5kep14m5j.cloudfront.net
+
+jobs:
+  deploy:
+    name: Deploy website to S3 and CloudFront
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Require the main branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Requested ref: ${GITHUB_REF}"
+
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::Production deployment is permitted only from main."
+            exit 1
+          fi
+
+          echo "PASS: Deployment is running from main."
+
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Validate website files
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REQUIRED_FILES=(
+            "website/index.html"
+            "website/styles.css"
+          )
+
+          for FILE in "${REQUIRED_FILES[@]}"; do
+            if [ ! -s "${FILE}" ]; then
+              echo "::error::Required file is missing or empty: ${FILE}"
+              exit 1
+            fi
+
+            echo "PASS: ${FILE} exists and is not empty."
+          done
+
+          echo
+          echo "Files prepared for deployment:"
+          find website -maxdepth 2 -type f -print | sort
+
+      - name: Configure AWS credentials through OIDC
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
+          role-session-name: GitHubActions-Portfolio-${{ github.run_id }}
+          aws-region: ${{ env.AWS_REGION }}
+          allowed-account-ids: ${{ env.AWS_ACCOUNT_ID }}
+
+      - name: Verify assumed AWS identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ACCOUNT_ID="$(
+            aws sts get-caller-identity \
+              --query Account \
+              --output text
+          )"
+
+          ASSUMED_ARN="$(
+            aws sts get-caller-identity \
+              --query Arn \
+              --output text
+          )"
+
+          echo "AWS account: ${ACCOUNT_ID}"
+          echo "Assumed identity: ${ASSUMED_ARN}"
+
+          if [ "${ACCOUNT_ID}" != "${AWS_ACCOUNT_ID}" ]; then
+            echo "::error::Unexpected AWS account: ${ACCOUNT_ID}"
+            exit 1
+          fi
+
+          case "${ASSUMED_ARN}" in
+            *":assumed-role/GitHubActions-AWSServerlessPortfolio-DeployRole/"*)
+              echo "PASS: Expected deployment role is active."
+              ;;
+            *)
+              echo "::error::Unexpected assumed identity: ${ASSUMED_ARN}"
+              exit 1
+              ;;
+          esac
+
+      - name: Preview S3 synchronization
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws s3 sync \
+            website/ \
+            "s3://${S3_BUCKET}/" \
+            --delete \
+            --dryrun
+
+      - name: Deploy website to S3
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws s3 sync \
+            website/ \
+            "s3://${S3_BUCKET}/" \
+            --delete \
+            --only-show-errors
+
+          echo "PASS: Website synchronized to S3."
+
+      - name: Verify deployed S3 objects
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws s3api head-object \
+            --bucket "${S3_BUCKET}" \
+            --key index.html \
+            >/dev/null
+
+          aws s3api head-object \
+            --bucket "${S3_BUCKET}" \
+            --key styles.css \
+            >/dev/null
+
+          echo "PASS: Required objects exist in the deployment bucket."
+
+          aws s3api list-objects-v2 \
+            --bucket "${S3_BUCKET}" \
+            --query 'Contents[].{Key:Key,Size:Size,Modified:LastModified}' \
+            --output table
+
+      - name: Invalidate CloudFront cache
+        id: invalidate
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          INVALIDATION_ID="$(
+            aws cloudfront create-invalidation \
+              --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+              --paths "/*" \
+              --query 'Invalidation.Id' \
+              --output text
+          )"
+
+          echo "Invalidation ID: ${INVALIDATION_ID}"
+          echo "invalidation_id=${INVALIDATION_ID}" >> "${GITHUB_OUTPUT}"
+
+      - name: Wait for CloudFront invalidation
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          aws cloudfront wait invalidation-completed \
+            --distribution-id "${CLOUDFRONT_DISTRIBUTION_ID}" \
+            --id "${{ steps.invalidate.outputs.invalidation_id }}"
+
+          echo "PASS: CloudFront invalidation completed."
+
+      - name: Verify live CloudFront deployment
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-delay 5 \
+            "${CLOUDFRONT_URL}/index.html" \
+            --output /tmp/live-index.html
+
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-delay 5 \
+            "${CLOUDFRONT_URL}/styles.css" \
+            --output /tmp/live-styles.css
+
+          if ! cmp --silent website/index.html /tmp/live-index.html; then
+            echo "::error::Live index.html does not match the repository version."
+            exit 1
+          fi
+
+          if ! cmp --silent website/styles.css /tmp/live-styles.css; then
+            echo "::error::Live styles.css does not match the repository version."
+            exit 1
+          fi
+
+          ROOT_STATUS="$(
+            curl \
+              --silent \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "${CLOUDFRONT_URL}/"
+          )"
+
+          if [ "${ROOT_STATUS}" != "200" ]; then
+            echo "::error::CloudFront root returned HTTP ${ROOT_STATUS}."
+            exit 1
+          fi
+
+          echo "PASS: CloudFront returned HTTP 200."
+          echo "PASS: Live files match the repository versions."
+
+      - name: Confirm direct S3 access remains blocked
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DIRECT_S3_STATUS="$(
+            curl \
+              --silent \
+              --output /dev/null \
+              --write-out '%{http_code}' \
+              "https://${S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/index.html"
+          )"
+
+          echo "Direct S3 response: HTTP ${DIRECT_S3_STATUS}"
+
+          if [ "${DIRECT_S3_STATUS}" != "403" ]; then
+            echo "::error::Expected direct S3 access to return HTTP 403."
+            exit 1
+          fi
+
+          echo "PASS: Direct S3 access remains blocked."
