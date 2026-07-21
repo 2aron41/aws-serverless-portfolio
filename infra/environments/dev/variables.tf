@@ -20,3 +20,9 @@ variable "environment" {
     error_message = "Environment must be dev or prod."
   }
 }
+
+variable "github_username" {
+  description = "GitHub username used in dev resource naming and tags."
+  type        = string
+  default     = "2aron41"
+}
