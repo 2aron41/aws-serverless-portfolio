@@ -91,3 +91,52 @@ Website files should remain deployed through GitHub Actions because application 
 - Add CloudFront and OAC only in a separately reviewed milestone
 - Define production migration and rollback procedures
 - Keep production resources unchanged until the module is fully validated
+
+## Example Usage
+
+```hcl
+module "static_site" {
+  source = "../../modules/static-site"
+
+  bucket_name       = "example-dev-bucket-name"
+  environment       = "dev"
+  enable_versioning = true
+
+  tags = {
+    Project     = "aws-serverless-portfolio"
+    Environment = "dev"
+    ManagedBy   = "Terraform"
+    Owner       = "Aaron"
+    Purpose     = "terraform-practice"
+  }
+}
+```
+
+## Managed Resources
+
+- S3 bucket
+- S3 public access block
+- S3 versioning
+
+## Not Yet Managed
+
+- CloudFront distribution
+- Origin Access Control
+- IAM deployment role
+- Production resources
+- Website uploads
+- CloudFront invalidations
+
+## Input Validation
+
+The module validates:
+
+- Bucket names are between 3 and 63 characters
+- Bucket names use supported lowercase characters
+- The environment is either `dev` or `prod`
+- Required tags are present and non-empty:
+  - `Project`
+  - `Environment`
+  - `ManagedBy`
+  - `Owner`
+  - `Purpose`

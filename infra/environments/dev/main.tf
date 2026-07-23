@@ -14,6 +14,7 @@ module "static_site" {
   source = "../../modules/static-site"
 
   bucket_name       = var.bucket_name
+  environment       = var.environment
   enable_versioning = true
 
   tags = merge(local.common_tags, {
