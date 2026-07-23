@@ -2,49 +2,92 @@
 
 ## Purpose
 
-Reusable Terraform module for managing static website infrastructure consistently across development and production environments.
+Reusable Terraform module for managing the S3 foundation of a private static website environment.
 
-The module should reduce duplicated Terraform configuration while keeping environment-specific values outside the reusable module.
+The module currently manages the same development S3 infrastructure that was originally declared directly in `infra/environments/dev`.
 
-## Future Inputs
+## Inputs
 
-- `project_name`
-- `environment`
-- `aws_region`
+### `bucket_name`
+
+- Description: Exact name of the S3 bucket
+- Type: `string`
+- Required: Yes
+
+### `enable_versioning`
+
+- Description: Whether S3 versioning is enabled
+- Type: `bool`
+- Default: `true`
+
+### `tags`
+
+- Description: Tags applied to the S3 bucket
+- Type: `map(string)`
+- Default: `{}`
+
+## Resources Managed
+
+- `aws_s3_bucket.this`
+- `aws_s3_bucket_public_access_block.this`
+- `aws_s3_bucket_versioning.this`
+
+The S3 bucket uses `force_destroy = false`.
+
+The public-access-block resource enables all four protections:
+
+- Block public ACLs
+- Ignore public ACLs
+- Block public bucket policies
+- Restrict public buckets
+
+## Outputs
+
 - `bucket_name`
-- `enable_versioning`
-- `tags`
+- `bucket_arn`
+- `bucket_regional_domain_name`
 
-Additional inputs may be introduced later only when required and safely tested in development.
+## Current Dev Usage
 
-## Future Resources
+The dev environment calls the module with the existing development bucket name and preserves all five existing tags:
 
-- S3 bucket
-- S3 public access block
-- S3 versioning
-- CloudFront Origin Access Control
-- CloudFront distribution
-- IAM permissions for GitHub Actions deployment
+- `Project`
+- `Environment`
+- `ManagedBy`
+- `Purpose`
+- `Owner`
+
+## Refactor Safety
+
+The existing dev resources were moved into this module using Terraform `moved` blocks.
+
+The reviewed plan reported:
+
+```text
+Plan: 0 to add, 0 to change, 0 to destroy.
+```
+
+After applying the saved move-only plan, the final Terraform plan returned:
+
+```text
+No changes. Your infrastructure matches the configuration.
+```
 
 ## Not Included
 
-- Website file upload
-- CloudFront invalidation
-- Application code deployment
+- Website file uploads
+- CloudFront distribution
+- CloudFront Origin Access Control
+- CloudFront invalidations
+- IAM deployment permissions
+- Application deployment
+- Production infrastructure
 
-Website files should continue to be deployed through GitHub Actions rather than Terraform. Terraform should manage infrastructure, while the deployment workflow should manage frequently changing application files.
+Website files should remain deployed through GitHub Actions because application content changes more frequently than infrastructure.
 
-## Safety Notes
+## Future Work
 
-This module should be tested in development before managing production infrastructure.
-
-Production resources must not be imported, replaced, or modified until:
-
-- The module works correctly in development
-- Inputs and outputs are documented
-- A development plan shows only expected changes
-- State storage and recovery procedures are established
-- Production import and migration steps are separately reviewed
-- A rollback plan exists
-
-The current development bucket should not be converted into this module until the existing configuration, state, and migration plan have been reviewed carefully.
+- Test additional module inputs in dev
+- Add CloudFront and OAC only in a separately reviewed milestone
+- Define production migration and rollback procedures
+- Keep production resources unchanged until the module is fully validated

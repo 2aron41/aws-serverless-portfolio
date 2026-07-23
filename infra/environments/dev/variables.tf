@@ -22,7 +22,12 @@ variable "environment" {
 }
 
 variable "github_username" {
-  description = "GitHub username used in dev resource naming and tags."
+  description = "GitHub username used in resource tags."
   type        = string
   default     = "2aron41"
+}
+
+variable "bucket_name" {
+  description = "Existing development S3 bucket name."
+  type        = string
 }

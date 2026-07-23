@@ -2,3 +2,6 @@ aws_region   = "us-east-1"
 project_name = "aws-serverless-portfolio"
 environment  = "dev"
 github_username = "2aron41"
+
+# Copy the exact existing dev bucket name here.
+bucket_name = "replace-with-existing-dev-bucket-name"
