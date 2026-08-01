@@ -1,0 +1,46 @@
+name: Terraform Static Site Module Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/modules/static-site/**"
+      - ".github/workflows/terraform-static-site-tests.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "infra/modules/static-site/**"
+      - ".github/workflows/terraform-static-site-tests.yml"
+
+jobs:
+  terraform-test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: infra/modules/static-site
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform init without backend
+        run: terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform test
+        run: terraform test
