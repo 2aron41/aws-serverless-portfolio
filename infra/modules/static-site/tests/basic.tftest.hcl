@@ -44,6 +44,26 @@ run "valid_static_site_configuration" {
   }
 
   assert {
+    condition     = var.enable_encryption
+    error_message = "S3 encryption should default to enabled."
+  }
+
+  assert {
+    condition     = length(aws_s3_bucket_server_side_encryption_configuration.this) == 1
+    error_message = "The S3 encryption configuration resource was not created."
+  }
+
+  assert {
+    condition = try(
+      one(
+        aws_s3_bucket_server_side_encryption_configuration.this[0].rule
+      ).apply_server_side_encryption_by_default[0].sse_algorithm,
+      ""
+    ) == "AES256"
+    error_message = "S3 default encryption must use the AES256 SSE-S3 algorithm."
+  }
+
+  assert {
     condition = (
       aws_s3_bucket_public_access_block.this.block_public_acls &&
       aws_s3_bucket_public_access_block.this.ignore_public_acls &&

@@ -29,6 +29,12 @@ variable "enable_versioning" {
   default     = true
 }
 
+variable "enable_encryption" {
+  description = "Whether default S3 server-side encryption should be explicitly managed."
+  type        = bool
+  default     = true
+}
+
 variable "tags" {
   description = "Tags applied to the static site resources."
   type        = map(string)
