@@ -31,3 +31,9 @@ variable "bucket_name" {
   description = "Existing development S3 bucket name."
   type        = string
 }
+
+variable "enable_cloudfront" {
+  description = "Whether to create CloudFront, OAC, and the private S3 bucket policy in dev."
+  type        = bool
+  default     = false
+}

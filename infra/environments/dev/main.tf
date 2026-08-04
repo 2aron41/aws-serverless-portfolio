@@ -16,6 +16,7 @@ module "static_site" {
   bucket_name       = var.bucket_name
   environment       = var.environment
   enable_versioning = true
+  enable_cloudfront = var.enable_cloudfront
 
   tags = merge(local.common_tags, {
     Purpose = "Terraform practice"
