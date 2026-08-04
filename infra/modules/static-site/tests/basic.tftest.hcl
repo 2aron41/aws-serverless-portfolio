@@ -85,6 +85,35 @@ run "valid_static_site_configuration" {
     )
     error_message = "All four S3 public-access protections must remain enabled."
   }
+
+  assert {
+    condition     = !var.enable_cloudfront
+    error_message = "CloudFront must remain disabled by default."
+  }
+
+  assert {
+    condition     = length(aws_cloudfront_origin_access_control.this) == 0
+    error_message = "Origin Access Control must not be created when CloudFront is disabled."
+  }
+
+  assert {
+    condition     = length(aws_cloudfront_distribution.this) == 0
+    error_message = "CloudFront distribution must not be created when CloudFront is disabled."
+  }
+
+  assert {
+    condition     = length(aws_s3_bucket_policy.cloudfront) == 0
+    error_message = "CloudFront bucket policy must not be created when CloudFront is disabled."
+  }
+
+  assert {
+    condition = (
+      output.cloudfront_distribution_id == null &&
+      output.cloudfront_domain_name == null &&
+      output.origin_access_control_id == null
+    )
+    error_message = "CloudFront outputs must be null when CloudFront is disabled."
+  }
 }
 
 run "reject_empty_bucket_name" {
