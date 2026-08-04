@@ -173,3 +173,53 @@ run "reject_missing_required_tag" {
     var.tags,
   ]
 }
+
+run "reject_empty_default_root_object" {
+  command = plan
+
+  variables {
+    bucket_name            = "day20-empty-root-test"
+    environment            = "dev"
+    enable_versioning      = true
+    enable_cloudfront      = false
+    default_root_object    = ""
+    cloudfront_price_class = "PriceClass_100"
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  expect_failures = [
+    var.default_root_object,
+  ]
+}
+
+run "reject_invalid_cloudfront_price_class" {
+  command = plan
+
+  variables {
+    bucket_name            = "day20-invalid-price-test"
+    environment            = "dev"
+    enable_versioning      = true
+    enable_cloudfront      = false
+    default_root_object    = "index.html"
+    cloudfront_price_class = "PriceClass_300"
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  expect_failures = [
+    var.cloudfront_price_class,
+  ]
+}

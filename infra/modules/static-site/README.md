@@ -140,3 +140,21 @@ The module validates:
   - `ManagedBy`
   - `Owner`
   - `Purpose`
+
+## Planned CloudFront Support
+
+CloudFront support is planned but not active yet.
+
+Future support should include:
+
+- CloudFront distribution
+- Origin Access Control
+- S3 bucket policy for private CloudFront access
+- CloudFront distribution ID output
+- CloudFront domain-name output
+
+CloudFront is intentionally not enabled yet because it affects the live request path, caching behavior, HTTPS delivery, S3 origin access, and GitHub Actions invalidation.
+
+The module currently exposes only placeholder CloudFront variables so validation and testing can be completed before any infrastructure resources are introduced.
+
+No CloudFront, Origin Access Control, bucket-policy, or production resources are created by the module at this stage.

@@ -48,3 +48,36 @@ variable "tags" {
     error_message = "Tags must include non-empty Project, Environment, ManagedBy, Owner, and Purpose values."
   }
 }
+
+variable "enable_cloudfront" {
+  description = "Whether to create a CloudFront distribution for the static site."
+  type        = bool
+  default     = false
+}
+
+variable "default_root_object" {
+  description = "Default object CloudFront should return for root requests."
+  type        = string
+  default     = "index.html"
+
+  validation {
+    condition     = length(trimspace(var.default_root_object)) > 0
+    error_message = "Default root object cannot be empty."
+  }
+}
+
+variable "cloudfront_price_class" {
+  description = "CloudFront price class for edge locations."
+  type        = string
+  default     = "PriceClass_100"
+
+  validation {
+    condition = contains([
+      "PriceClass_100",
+      "PriceClass_200",
+      "PriceClass_All"
+    ], var.cloudfront_price_class)
+
+    error_message = "CloudFront price class must be PriceClass_100, PriceClass_200, or PriceClass_All."
+  }
+}
