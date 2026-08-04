@@ -1,7 +1,15 @@
 # Goal
 # Test the static-site module with safe sample inputs and confirm the module accepts valid configuration.
 
-mock_provider "aws" {}
+mock_provider "aws" {
+  override_during = plan
+
+  mock_resource "aws_s3_bucket" {
+    defaults = {
+      id = "day16-static-site-test"
+    }
+  }
+}
 
 run "valid_static_site_configuration" {
   command = plan
@@ -23,6 +31,11 @@ run "valid_static_site_configuration" {
   assert {
     condition     = aws_s3_bucket.this.bucket == "day16-static-site-test"
     error_message = "The module did not accept the expected bucket name."
+  }
+
+  assert {
+    condition     = output.bucket_name == "day16-static-site-test"
+    error_message = "The bucket_name output did not return the expected bucket name."
   }
 
   assert {
