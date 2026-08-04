@@ -252,3 +252,55 @@ run "reject_invalid_cloudfront_price_class" {
     var.cloudfront_price_class,
   ]
 }
+
+run "plan_cloudfront_when_enabled" {
+  command = plan
+
+  variables {
+    bucket_name            = "day22-cloudfront-plan-test"
+    environment            = "dev"
+    enable_versioning      = true
+    enable_encryption      = true
+    enable_cloudfront      = true
+    default_root_object    = "index.html"
+    cloudfront_price_class = "PriceClass_100"
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  assert {
+    condition     = length(aws_cloudfront_origin_access_control.this) == 1
+    error_message = "Exactly one Origin Access Control should be planned when CloudFront is enabled."
+  }
+
+  assert {
+    condition     = length(aws_cloudfront_distribution.this) == 1
+    error_message = "Exactly one CloudFront distribution should be planned when CloudFront is enabled."
+  }
+
+  assert {
+    condition     = length(aws_s3_bucket_policy.cloudfront) == 1
+    error_message = "Exactly one CloudFront S3 bucket policy should be planned when CloudFront is enabled."
+  }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].default_root_object == "index.html"
+    error_message = "CloudFront should use index.html as the default root object."
+  }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].price_class == "PriceClass_100"
+    error_message = "CloudFront should use the expected price class."
+  }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].default_cache_behavior[0].viewer_protocol_policy == "redirect-to-https"
+    error_message = "CloudFront should redirect viewers from HTTP to HTTPS."
+  }
+}
