@@ -1,0 +1,17 @@
+aws_region      = "us-east-1"
+project_name    = "aws-serverless-portfolio"
+environment     = "prod"
+github_username = "2aron41"
+
+# Existing production bucket identified during Day 25 inventory.
+bucket_name = "replace-with-existing-production-bucket-name"
+
+# Match the existing production configuration before proposing improvements.
+enable_versioning      = false
+enable_encryption      = true
+enable_cloudfront      = true
+default_root_object    = "index.html"
+cloudfront_price_class   = "PriceClass_All"
+cloudfront_allowed_methods = ["GET", "HEAD"]
+
+purpose = "Production portfolio website"

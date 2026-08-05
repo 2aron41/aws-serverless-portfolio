@@ -1,0 +1,14 @@
+# Rename this file to backend.tf only after production import preparation
+# has been reviewed and explicitly approved.
+#
+# Do not initialize this backend during Day 26.
+
+terraform {
+  backend "s3" {
+    bucket       = "replace-with-existing-terraform-state-bucket"
+    key          = "aws-serverless-portfolio/prod/terraform.tfstate"
+    region       = "us-east-1"
+    encrypt      = true
+    use_lockfile = true
+  }
+}

@@ -66,6 +66,25 @@ variable "default_root_object" {
   }
 }
 
+variable "cloudfront_allowed_methods" {
+  description = "HTTP methods CloudFront allows for the default cache behavior."
+  type        = list(string)
+  default     = ["GET", "HEAD", "OPTIONS"]
+
+  validation {
+    condition = (
+      length(var.cloudfront_allowed_methods) > 0 &&
+      alltrue([
+        for method in var.cloudfront_allowed_methods :
+        contains(["GET", "HEAD", "OPTIONS"], method)
+      ]) &&
+      contains(var.cloudfront_allowed_methods, "GET") &&
+      contains(var.cloudfront_allowed_methods, "HEAD")
+    )
+    error_message = "CloudFront allowed methods must contain GET and HEAD and may optionally contain OPTIONS."
+  }
+}
+
 variable "cloudfront_price_class" {
   description = "CloudFront price class for edge locations."
   type        = string

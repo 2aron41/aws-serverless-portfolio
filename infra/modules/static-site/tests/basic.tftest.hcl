@@ -319,6 +319,13 @@ run "plan_cloudfront_when_enabled" {
   }
 
   assert {
+    condition = toset(
+      aws_cloudfront_distribution.this[0].default_cache_behavior[0].allowed_methods
+    ) == toset(["GET", "HEAD", "OPTIONS"])
+    error_message = "CloudFront should allow GET, HEAD, and OPTIONS by default."
+  }
+
+  assert {
     condition     = aws_cloudfront_origin_access_control.this[0].signing_behavior == "always"
     error_message = "Origin Access Control should always sign requests."
   }
@@ -347,4 +354,68 @@ run "plan_cloudfront_when_enabled" {
     condition     = output.origin_access_control_id != null
     error_message = "Origin Access Control output should not be null when CloudFront is enabled."
   }
+}
+
+
+run "plan_production_compatible_cloudfront_methods" {
+  command = plan
+
+  variables {
+    bucket_name                = "day26-prod-methods-test"
+    environment                = "prod"
+    enable_versioning          = false
+    enable_encryption          = true
+    enable_cloudfront          = true
+    default_root_object        = "index.html"
+    cloudfront_price_class     = "PriceClass_All"
+    cloudfront_allowed_methods = ["GET", "HEAD"]
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "prod"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "production-import-planning"
+    }
+  }
+
+  assert {
+    condition = toset(
+      aws_cloudfront_distribution.this[0].default_cache_behavior[0].allowed_methods
+    ) == toset(["GET", "HEAD"])
+    error_message = "Production-compatible CloudFront configuration should allow only GET and HEAD."
+  }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].price_class == "PriceClass_All"
+    error_message = "Production-compatible CloudFront configuration should use PriceClass_All."
+  }
+
+  assert {
+    condition     = aws_s3_bucket_versioning.this.versioning_configuration[0].status == "Suspended"
+    error_message = "Production-compatible configuration should keep versioning disabled before import."
+  }
+}
+
+run "reject_invalid_cloudfront_allowed_method" {
+  command = plan
+
+  variables {
+    bucket_name                = "day26-invalid-method-test"
+    environment                = "dev"
+    enable_cloudfront          = true
+    cloudfront_allowed_methods = ["GET", "HEAD", "POST"]
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  expect_failures = [
+    var.cloudfront_allowed_methods,
+  ]
 }
