@@ -9,6 +9,20 @@ mock_provider "aws" {
       id = "day16-static-site-test"
     }
   }
+
+  mock_resource "aws_cloudfront_distribution" {
+    defaults = {
+      id          = "DAY24MOCKDISTRIBUTION"
+      arn         = "arn:aws:cloudfront::123456789012:distribution/DAY24MOCKDISTRIBUTION"
+      domain_name = "day24-mock.cloudfront.net"
+    }
+  }
+
+  mock_resource "aws_cloudfront_origin_access_control" {
+    defaults = {
+      id = "DAY24MOCKOAC"
+    }
+  }
 }
 
 run "valid_static_site_configuration" {
@@ -302,5 +316,35 @@ run "plan_cloudfront_when_enabled" {
   assert {
     condition     = aws_cloudfront_distribution.this[0].default_cache_behavior[0].viewer_protocol_policy == "redirect-to-https"
     error_message = "CloudFront should redirect viewers from HTTP to HTTPS."
+  }
+
+  assert {
+    condition     = aws_cloudfront_origin_access_control.this[0].signing_behavior == "always"
+    error_message = "Origin Access Control should always sign requests."
+  }
+
+  assert {
+    condition     = aws_cloudfront_origin_access_control.this[0].signing_protocol == "sigv4"
+    error_message = "Origin Access Control should use SigV4."
+  }
+
+  assert {
+    condition     = aws_cloudfront_origin_access_control.this[0].origin_access_control_origin_type == "s3"
+    error_message = "Origin Access Control should be configured for S3."
+  }
+
+  assert {
+    condition     = output.cloudfront_distribution_id != null
+    error_message = "CloudFront distribution ID output should not be null when CloudFront is enabled."
+  }
+
+  assert {
+    condition     = output.cloudfront_domain_name != null
+    error_message = "CloudFront domain output should not be null when CloudFront is enabled."
+  }
+
+  assert {
+    condition     = output.origin_access_control_id != null
+    error_message = "Origin Access Control output should not be null when CloudFront is enabled."
   }
 }
