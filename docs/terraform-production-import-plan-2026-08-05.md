@@ -245,5 +245,7 @@ Terraform tests verify both the module defaults and production-compatible values
 
 The test suite now contains 13 passing tests.
 
-The primary unresolved design difference is production tagging. Existing production resources have no tags, while the module requires standard tags. This must be reviewed before any production apply.
+The production tag strategy is now decided. Required module tags will remain enabled.
+
+Because existing production resources have no tags, the first post-import plan may propose adding standard tags. Tag additions must be classified as a separate intentional improvement and must not be applied during the initial import session.
 

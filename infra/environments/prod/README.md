@@ -47,9 +47,21 @@ The module now supports production-specific values for:
 
 Development can retain its existing defaults while production can model the current live configuration more closely.
 
-## Remaining Review Item
+## Tag Adoption Decision
 
-The production resources currently have no tags, while the module requires standard tags. Tag adoption must be reviewed separately before any production apply.
+The existing production resources currently have no tags, while the module requires standard governance tags.
+
+The module tag requirements will remain enabled.
+
+After import, Terraform may propose adding the following tags:
+
+- `Project`
+- `Environment`
+- `ManagedBy`
+- `Owner`
+- `Purpose`
+
+Tag additions must be reviewed as a separate, intentional in-place improvement. They must not be applied during the initial production import session.
 
 ## Safety Rules
 
@@ -65,8 +77,9 @@ Do not create a real production backend or production state until the module con
 
 ## Next Steps
 
-1. Add tests for the production-matching CloudFront and OAC values.
-2. Review the remaining tag difference.
-3. Reverify exact production identifiers before import.
-4. Create the production backend only after the configuration is ready.
-5. Review the import sequence before executing any import.
+1. Complete the production import-readiness gate.
+2. Reverify exact production identifiers immediately before import.
+3. Back up production configuration, content, and state.
+4. Activate and review the isolated production backend.
+5. Import and verify one resource at a time.
+6. Do not apply post-import drift during the import session.
