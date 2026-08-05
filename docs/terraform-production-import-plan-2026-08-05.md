@@ -69,15 +69,22 @@ CloudFront allowed methods were made configurable so the module can represent th
 
 ## Remaining Expected Differences
 
-Even after matching the major variables, an initial post-import plan may still show differences such as:
+Day 27 added production-matching controls for:
+
+- CloudFront comment
+- CloudFront origin ID
+- OAC name
+- OAC description
+- S3 bucket-policy SourceArn condition operator
+
+These values can now be configured to match the existing production resources before import.
+
+Remaining post-import differences may still include:
 
 - Terraform-required tags that do not exist on current production resources
-- Module-generated CloudFront comment differing from the current empty comment
-- Module-generated OAC name and description differing from the current production values
-- Module-generated origin ID differing from the existing production origin ID
-- Bucket policy using `StringEquals` while production currently uses `ArnLike`
 - Provider defaults or normalized CloudFront attributes
 - S3 versioning behavior for a bucket that has never had versioning enabled
+- Other attributes revealed only after state import and refresh
 
 Every difference must be reviewed before any production apply.
 
@@ -220,4 +227,23 @@ Do not use `terraform destroy` as an import rollback method.
 The production environment skeleton and import plan are ready for review.
 
 Do not initialize the production backend, create production state, import resources, or run a production plan today.
+
+
+## Day 27 Drift-Reduction Update
+
+The module now supports production-specific configuration for:
+
+- CloudFront allowed methods
+- CloudFront price class
+- CloudFront comment, including an explicitly empty comment
+- CloudFront origin ID
+- OAC name
+- OAC description
+- S3 bucket-policy SourceArn condition operator
+
+Terraform tests verify both the module defaults and production-compatible values.
+
+The test suite now contains 13 passing tests.
+
+The primary unresolved design difference is production tagging. Existing production resources have no tags, while the module requires standard tags. This must be reviewed before any production apply.
 

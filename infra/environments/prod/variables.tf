@@ -68,6 +68,34 @@ variable "cloudfront_allowed_methods" {
   default     = ["GET", "HEAD"]
 }
 
+variable "cloudfront_comment" {
+  description = "Comment matching the existing production CloudFront distribution."
+  type        = string
+  default     = ""
+}
+
+variable "cloudfront_origin_id" {
+  description = "Origin ID matching the existing production CloudFront distribution."
+  type        = string
+}
+
+variable "cloudfront_oac_name" {
+  description = "Name matching the existing production Origin Access Control."
+  type        = string
+}
+
+variable "cloudfront_oac_description" {
+  description = "Description matching the existing production Origin Access Control."
+  type        = string
+  default     = "Created by CloudFront"
+}
+
+variable "cloudfront_source_arn_condition_test" {
+  description = "Bucket-policy SourceArn condition operator matching production."
+  type        = string
+  default     = "ArnLike"
+}
+
 variable "purpose" {
   description = "Purpose tag for the production portfolio infrastructure."
   type        = string

@@ -33,20 +33,23 @@ The Day 25 inventory found:
 - No Route 53 hosted zone
 - No ACM certificate
 
-## Known Module Mismatch
+## Production-Matching Controls
 
-The current static-site module hardcodes CloudFront allowed methods as:
+The module now supports production-specific values for:
 
-- `GET`
-- `HEAD`
-- `OPTIONS`
+- CloudFront allowed methods
+- CloudFront price class
+- CloudFront comment
+- CloudFront origin ID
+- OAC name
+- OAC description
+- S3 bucket-policy SourceArn condition operator
 
-The existing production distribution allows only:
+Development can retain its existing defaults while production can model the current live configuration more closely.
 
-- `GET`
-- `HEAD`
+## Remaining Review Item
 
-This mismatch must be resolved before production import.
+The production resources currently have no tags, while the module requires standard tags. Tag adoption must be reviewed separately before any production apply.
 
 ## Safety Rules
 
@@ -62,9 +65,8 @@ Do not create a real production backend or production state until the module con
 
 ## Next Steps
 
-1. Make CloudFront allowed methods configurable.
-2. Add tests for production-compatible allowed methods.
-3. Review all remaining differences between production and the module.
+1. Add tests for the production-matching CloudFront and OAC values.
+2. Review the remaining tag difference.
+3. Reverify exact production identifiers before import.
 4. Create the production backend only after the configuration is ready.
-5. Prepare exact import addresses and IDs.
-6. Review the import sequence before executing any import.
+5. Review the import sequence before executing any import.

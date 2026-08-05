@@ -35,14 +35,31 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "this" {
 }
 
 locals {
-  cloudfront_origin_id = "${var.bucket_name}-s3-origin"
+  cloudfront_origin_id = coalesce(
+    var.cloudfront_origin_id,
+    "${var.bucket_name}-s3-origin"
+  )
+
+  cloudfront_comment = var.cloudfront_comment == null ? (
+    "Static-site distribution for ${var.bucket_name}"
+  ) : var.cloudfront_comment
+
+  cloudfront_oac_name = substr(
+    coalesce(var.cloudfront_oac_name, "${var.bucket_name}-oac"),
+    0,
+    64
+  )
+
+  cloudfront_oac_description = var.cloudfront_oac_description == null ? (
+    "Origin Access Control for ${var.bucket_name}"
+  ) : var.cloudfront_oac_description
 }
 
 resource "aws_cloudfront_origin_access_control" "this" {
   count = var.enable_cloudfront ? 1 : 0
 
-  name                              = substr("${var.bucket_name}-oac", 0, 64)
-  description                       = "Origin Access Control for ${var.bucket_name}"
+  name                              = local.cloudfront_oac_name
+  description                       = local.cloudfront_oac_description
   origin_access_control_origin_type = "s3"
   signing_behavior                  = "always"
   signing_protocol                  = "sigv4"
@@ -53,7 +70,7 @@ resource "aws_cloudfront_distribution" "this" {
 
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "Static-site distribution for ${var.bucket_name}"
+  comment             = local.cloudfront_comment
   default_root_object = var.default_root_object
   price_class         = var.cloudfront_price_class
 
@@ -116,7 +133,7 @@ data "aws_iam_policy_document" "cloudfront_s3_read" {
     }
 
     condition {
-      test     = "StringEquals"
+      test     = var.cloudfront_source_arn_condition_test
       variable = "AWS:SourceArn"
 
       values = [

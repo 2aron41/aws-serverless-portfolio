@@ -14,4 +14,12 @@ default_root_object    = "index.html"
 cloudfront_price_class   = "PriceClass_All"
 cloudfront_allowed_methods = ["GET", "HEAD"]
 
+# Replace these placeholders with values reverified from private AWS evidence
+# immediately before any production import.
+cloudfront_comment                   = ""
+cloudfront_origin_id                 = "replace-with-existing-production-origin-id"
+cloudfront_oac_name                  = "replace-with-existing-production-oac-name"
+cloudfront_oac_description           = "Created by CloudFront"
+cloudfront_source_arn_condition_test = "ArnLike"
+
 purpose = "Production portfolio website"

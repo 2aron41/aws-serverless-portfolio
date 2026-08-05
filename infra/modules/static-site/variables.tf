@@ -85,6 +85,64 @@ variable "cloudfront_allowed_methods" {
   }
 }
 
+variable "cloudfront_comment" {
+  description = "Comment assigned to the CloudFront distribution. Null uses the module-generated default."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "cloudfront_origin_id" {
+  description = "Origin ID used by the CloudFront distribution. Null uses the module-generated default."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.cloudfront_origin_id == null ||
+      length(trimspace(var.cloudfront_origin_id)) > 0
+    )
+    error_message = "CloudFront origin ID must be null or a non-empty string."
+  }
+}
+
+variable "cloudfront_oac_name" {
+  description = "Name assigned to the CloudFront Origin Access Control. Null uses the module-generated default."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.cloudfront_oac_name == null ||
+      length(trimspace(var.cloudfront_oac_name)) > 0
+    )
+    error_message = "CloudFront OAC name must be null or a non-empty string."
+  }
+}
+
+variable "cloudfront_oac_description" {
+  description = "Description assigned to the CloudFront Origin Access Control. Null uses the module-generated default."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "cloudfront_source_arn_condition_test" {
+  description = "Condition operator used to restrict S3 access to the CloudFront distribution ARN."
+  type        = string
+  default     = "StringEquals"
+
+  validation {
+    condition = contains(
+      ["StringEquals", "ArnLike"],
+      var.cloudfront_source_arn_condition_test
+    )
+    error_message = "CloudFront SourceArn condition test must be StringEquals or ArnLike."
+  }
+}
+
 variable "cloudfront_price_class" {
   description = "CloudFront price class for edge locations."
   type        = string

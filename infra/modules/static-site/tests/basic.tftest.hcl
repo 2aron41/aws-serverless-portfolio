@@ -361,14 +361,19 @@ run "plan_production_compatible_cloudfront_methods" {
   command = plan
 
   variables {
-    bucket_name                = "day26-prod-methods-test"
-    environment                = "prod"
-    enable_versioning          = false
-    enable_encryption          = true
-    enable_cloudfront          = true
-    default_root_object        = "index.html"
-    cloudfront_price_class     = "PriceClass_All"
-    cloudfront_allowed_methods = ["GET", "HEAD"]
+    bucket_name                          = "day26-prod-methods-test"
+    environment                          = "prod"
+    enable_versioning                    = false
+    enable_encryption                    = true
+    enable_cloudfront                    = true
+    default_root_object                  = "index.html"
+    cloudfront_price_class               = "PriceClass_All"
+    cloudfront_allowed_methods           = ["GET", "HEAD"]
+    cloudfront_comment                   = ""
+    cloudfront_origin_id                 = "existing-production-origin-id"
+    cloudfront_oac_name                  = "existing-production-oac-name"
+    cloudfront_oac_description           = "Created by CloudFront"
+    cloudfront_source_arn_condition_test = "ArnLike"
 
     tags = {
       Project     = "aws-serverless-portfolio"
@@ -395,6 +400,39 @@ run "plan_production_compatible_cloudfront_methods" {
     condition     = aws_s3_bucket_versioning.this.versioning_configuration[0].status == "Suspended"
     error_message = "Production-compatible configuration should keep versioning disabled before import."
   }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].comment == ""
+    error_message = "Production-compatible CloudFront configuration should preserve the empty production comment."
+  }
+
+  assert {
+    condition = one([
+      for origin in aws_cloudfront_distribution.this[0].origin :
+      origin.origin_id
+    ]) == "existing-production-origin-id"
+    error_message = "CloudFront should use the configured production origin ID."
+  }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].default_cache_behavior[0].target_origin_id == "existing-production-origin-id"
+    error_message = "The default cache behavior should target the configured production origin ID."
+  }
+
+  assert {
+    condition     = aws_cloudfront_origin_access_control.this[0].name == "existing-production-oac-name"
+    error_message = "Origin Access Control should use the configured production name."
+  }
+
+  assert {
+    condition     = aws_cloudfront_origin_access_control.this[0].description == "Created by CloudFront"
+    error_message = "Origin Access Control should preserve the configured production description."
+  }
+
+  assert {
+    condition     = var.cloudfront_source_arn_condition_test == "ArnLike"
+    error_message = "The production-compatible bucket policy should use an ArnLike SourceArn condition."
+  }
 }
 
 run "reject_invalid_cloudfront_allowed_method" {
@@ -417,5 +455,75 @@ run "reject_invalid_cloudfront_allowed_method" {
 
   expect_failures = [
     var.cloudfront_allowed_methods,
+  ]
+}
+
+
+run "reject_invalid_source_arn_condition_test" {
+  command = plan
+
+  variables {
+    bucket_name                          = "day27-invalid-condition-test"
+    environment                          = "dev"
+    enable_cloudfront                    = true
+    cloudfront_source_arn_condition_test = "StringLike"
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  expect_failures = [
+    var.cloudfront_source_arn_condition_test,
+  ]
+}
+
+run "reject_empty_cloudfront_origin_id" {
+  command = plan
+
+  variables {
+    bucket_name          = "day27-empty-origin-test"
+    environment          = "dev"
+    enable_cloudfront    = true
+    cloudfront_origin_id = "   "
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  expect_failures = [
+    var.cloudfront_origin_id,
+  ]
+}
+
+run "reject_empty_cloudfront_oac_name" {
+  command = plan
+
+  variables {
+    bucket_name         = "day27-empty-oac-test"
+    environment         = "dev"
+    enable_cloudfront   = true
+    cloudfront_oac_name = ""
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  expect_failures = [
+    var.cloudfront_oac_name,
   ]
 }
