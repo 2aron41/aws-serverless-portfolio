@@ -29,6 +29,11 @@ cloudfront_comment                   = ""
 cloudfront_origin_id                 = "replace-with-existing-production-origin-id"
 cloudfront_oac_name                  = "replace-with-existing-production-oac-name"
 cloudfront_oac_description           = "Created by CloudFront"
+# Match existing policy-document metadata during import reconciliation.
+cloudfront_policy_id      = "replace-with-existing-production-policy-id"
+cloudfront_policy_version = "2008-10-17"
+cloudfront_policy_sid     = "replace-with-existing-production-policy-sid"
+
 cloudfront_source_arn_condition_test = "ArnLike"
 
 purpose = "Production portfolio website"

@@ -111,6 +111,25 @@ variable "cloudfront_oac_description" {
   default     = "Created by CloudFront"
 }
 
+variable "cloudfront_policy_id" {
+  description = "Policy ID matching the existing production S3 bucket policy."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "cloudfront_policy_version" {
+  description = "IAM policy language version matching the existing production S3 bucket policy."
+  type        = string
+  default     = "2012-10-17"
+}
+
+variable "cloudfront_policy_sid" {
+  description = "Statement ID matching the existing production S3 bucket policy."
+  type        = string
+  default     = "AllowCloudFrontReadOnly"
+}
+
 variable "cloudfront_source_arn_condition_test" {
   description = "Bucket-policy SourceArn condition operator matching production."
   type        = string

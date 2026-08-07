@@ -158,6 +158,47 @@ variable "cloudfront_oac_description" {
   nullable    = true
 }
 
+variable "cloudfront_policy_id" {
+  description = "Optional ID included in the generated CloudFront S3 bucket policy."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.cloudfront_policy_id == null ||
+      length(trimspace(var.cloudfront_policy_id)) > 0
+    )
+    error_message = "CloudFront bucket policy ID must be null or a non-empty string."
+  }
+}
+
+variable "cloudfront_policy_version" {
+  description = "IAM policy language version used by the generated CloudFront S3 bucket policy."
+  type        = string
+  default     = "2012-10-17"
+
+  validation {
+    condition = contains([
+      "2008-10-17",
+      "2012-10-17"
+    ], var.cloudfront_policy_version)
+
+    error_message = "CloudFront bucket policy version must be 2008-10-17 or 2012-10-17."
+  }
+}
+
+variable "cloudfront_policy_sid" {
+  description = "Statement ID used by the generated CloudFront S3 bucket policy."
+  type        = string
+  default     = "AllowCloudFrontReadOnly"
+
+  validation {
+    condition     = length(trimspace(var.cloudfront_policy_sid)) > 0
+    error_message = "CloudFront bucket policy statement ID cannot be empty."
+  }
+}
+
 variable "cloudfront_source_arn_condition_test" {
   description = "Condition operator used to restrict S3 access to the CloudFront distribution ARN."
   type        = string

@@ -28,6 +28,9 @@ module "static_site" {
   cloudfront_origin_id                 = var.cloudfront_origin_id
   cloudfront_oac_name                  = var.cloudfront_oac_name
   cloudfront_oac_description           = var.cloudfront_oac_description
+  cloudfront_policy_id                 = var.cloudfront_policy_id
+  cloudfront_policy_version            = var.cloudfront_policy_version
+  cloudfront_policy_sid                = var.cloudfront_policy_sid
   cloudfront_source_arn_condition_test = var.cloudfront_source_arn_condition_test
 
   tags = merge(local.common_tags, {

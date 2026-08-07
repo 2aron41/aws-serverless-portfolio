@@ -378,6 +378,9 @@ run "plan_production_compatible_cloudfront_methods" {
     cloudfront_origin_id                 = "existing-production-origin-id"
     cloudfront_oac_name                  = "existing-production-oac-name"
     cloudfront_oac_description           = "Created by CloudFront"
+    cloudfront_policy_id                 = "PolicyForCloudFrontPrivateContent"
+    cloudfront_policy_version            = "2008-10-17"
+    cloudfront_policy_sid                = "AllowCloudFrontServicePrincipal"
     cloudfront_source_arn_condition_test = "ArnLike"
 
     tags = {
@@ -452,6 +455,21 @@ run "plan_production_compatible_cloudfront_methods" {
   assert {
     condition     = aws_cloudfront_origin_access_control.this[0].description == "Created by CloudFront"
     error_message = "Origin Access Control should preserve the configured production description."
+  }
+
+  assert {
+    condition     = data.aws_iam_policy_document.cloudfront_s3_read[0].policy_id == "PolicyForCloudFrontPrivateContent"
+    error_message = "Production-compatible policy should preserve the existing policy ID."
+  }
+
+  assert {
+    condition     = data.aws_iam_policy_document.cloudfront_s3_read[0].version == "2008-10-17"
+    error_message = "Production-compatible policy should preserve the existing policy language version."
+  }
+
+  assert {
+    condition     = data.aws_iam_policy_document.cloudfront_s3_read[0].statement[0].sid == "AllowCloudFrontServicePrincipal"
+    error_message = "Production-compatible policy should preserve the existing statement ID."
   }
 
   assert {

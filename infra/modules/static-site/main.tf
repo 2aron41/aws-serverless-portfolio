@@ -117,8 +117,11 @@ resource "aws_cloudfront_distribution" "this" {
 data "aws_iam_policy_document" "cloudfront_s3_read" {
   count = var.enable_cloudfront ? 1 : 0
 
+  policy_id = var.cloudfront_policy_id
+  version   = var.cloudfront_policy_version
+
   statement {
-    sid    = "AllowCloudFrontReadOnly"
+    sid    = var.cloudfront_policy_sid
     effect = "Allow"
 
     actions = [
