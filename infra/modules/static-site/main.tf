@@ -2,7 +2,7 @@ resource "aws_s3_bucket" "this" {
   bucket        = var.bucket_name
   force_destroy = false
 
-  tags = var.tags
+  tags = var.s3_bucket_tags == null ? var.tags : var.s3_bucket_tags
 }
 
 resource "aws_s3_bucket_public_access_block" "this" {

@@ -66,6 +66,13 @@ variable "default_root_object" {
   }
 }
 
+variable "s3_bucket_tags" {
+  description = "Optional S3 bucket-specific tag override. Null uses the module-wide tags."
+  type        = map(string)
+  default     = null
+  nullable    = true
+}
+
 variable "cloudfront_allowed_methods" {
   description = "HTTP methods CloudFront allows for the default cache behavior."
   type        = list(string)

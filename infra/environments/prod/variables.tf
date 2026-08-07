@@ -32,6 +32,13 @@ variable "bucket_name" {
   type        = string
 }
 
+variable "s3_bucket_tags" {
+  description = "S3 bucket-specific tags matching the existing production bucket during import reconciliation."
+  type        = map(string)
+  default     = null
+  nullable    = true
+}
+
 variable "enable_versioning" {
   description = "Whether production S3 versioning should be enabled."
   type        = bool

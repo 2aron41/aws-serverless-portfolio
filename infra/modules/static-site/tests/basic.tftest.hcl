@@ -363,6 +363,7 @@ run "plan_production_compatible_cloudfront_methods" {
   variables {
     bucket_name                = "day26-prod-methods-test"
     environment                = "prod"
+    s3_bucket_tags             = {}
     enable_versioning          = false
     enable_encryption          = true
     enable_cloudfront          = true
@@ -413,6 +414,11 @@ run "plan_production_compatible_cloudfront_methods" {
   assert {
     condition     = aws_cloudfront_distribution.this[0].price_class == "PriceClass_All"
     error_message = "Production-compatible CloudFront configuration should use PriceClass_All."
+  }
+
+  assert {
+    condition     = length(aws_s3_bucket.this.tags) == 0
+    error_message = "Production-compatible configuration should preserve the existing untagged S3 bucket during import reconciliation."
   }
 
   assert {

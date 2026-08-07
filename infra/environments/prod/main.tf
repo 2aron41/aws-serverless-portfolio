@@ -15,6 +15,7 @@ module "static_site" {
 
   bucket_name                          = var.bucket_name
   environment                          = var.environment
+  s3_bucket_tags                       = var.s3_bucket_tags
   enable_versioning                    = var.enable_versioning
   enable_encryption                    = var.enable_encryption
   enable_cloudfront                    = var.enable_cloudfront
