@@ -13,6 +13,11 @@ enable_cloudfront      = true
 default_root_object    = "index.html"
 cloudfront_price_class   = "PriceClass_All"
 cloudfront_allowed_methods = ["GET", "HEAD"]
+cloudfront_cache_policy_id = "replace-with-existing-production-cache-policy-id"
+
+cloudfront_tags = {
+  Name = "replace-with-existing-production-cloudfront-name-tag"
+}
 
 # Replace these placeholders with values reverified from private AWS evidence
 # immediately before any production import.

@@ -85,6 +85,28 @@ variable "cloudfront_allowed_methods" {
   }
 }
 
+variable "cloudfront_cache_policy_id" {
+  description = "Optional CloudFront cache policy ID. When null, the module uses the legacy forwarded_values configuration."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.cloudfront_cache_policy_id == null ||
+      length(trimspace(var.cloudfront_cache_policy_id)) > 0
+    )
+    error_message = "CloudFront cache policy ID must be null or a non-empty string."
+  }
+}
+
+variable "cloudfront_tags" {
+  description = "Optional CloudFront-specific tag override. Null uses the module-wide tags."
+  type        = map(string)
+  default     = null
+  nullable    = true
+}
+
 variable "cloudfront_comment" {
   description = "Comment assigned to the CloudFront distribution. Null uses the module-generated default."
   type        = string

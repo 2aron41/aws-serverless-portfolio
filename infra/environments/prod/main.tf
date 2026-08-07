@@ -21,6 +21,8 @@ module "static_site" {
   default_root_object                  = var.default_root_object
   cloudfront_price_class               = var.cloudfront_price_class
   cloudfront_allowed_methods           = var.cloudfront_allowed_methods
+  cloudfront_cache_policy_id           = var.cloudfront_cache_policy_id
+  cloudfront_tags                      = var.cloudfront_tags
   cloudfront_comment                   = var.cloudfront_comment
   cloudfront_origin_id                 = var.cloudfront_origin_id
   cloudfront_oac_name                  = var.cloudfront_oac_name

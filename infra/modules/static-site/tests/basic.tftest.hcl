@@ -361,14 +361,18 @@ run "plan_production_compatible_cloudfront_methods" {
   command = plan
 
   variables {
-    bucket_name                          = "day26-prod-methods-test"
-    environment                          = "prod"
-    enable_versioning                    = false
-    enable_encryption                    = true
-    enable_cloudfront                    = true
-    default_root_object                  = "index.html"
-    cloudfront_price_class               = "PriceClass_All"
-    cloudfront_allowed_methods           = ["GET", "HEAD"]
+    bucket_name                = "day26-prod-methods-test"
+    environment                = "prod"
+    enable_versioning          = false
+    enable_encryption          = true
+    enable_cloudfront          = true
+    default_root_object        = "index.html"
+    cloudfront_price_class     = "PriceClass_All"
+    cloudfront_allowed_methods = ["GET", "HEAD"]
+    cloudfront_cache_policy_id = "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    cloudfront_tags = {
+      Name = "aaron-portfolio-cdn"
+    }
     cloudfront_comment                   = ""
     cloudfront_origin_id                 = "existing-production-origin-id"
     cloudfront_oac_name                  = "existing-production-oac-name"
@@ -389,6 +393,21 @@ run "plan_production_compatible_cloudfront_methods" {
       aws_cloudfront_distribution.this[0].default_cache_behavior[0].allowed_methods
     ) == toset(["GET", "HEAD"])
     error_message = "Production-compatible CloudFront configuration should allow only GET and HEAD."
+  }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].default_cache_behavior[0].cache_policy_id == "658327ea-f89d-4fab-a63d-7e88639e58f6"
+    error_message = "Production-compatible CloudFront configuration should preserve the existing cache policy."
+  }
+
+  assert {
+    condition     = aws_cloudfront_distribution.this[0].tags["Name"] == "aaron-portfolio-cdn"
+    error_message = "Production-compatible CloudFront configuration should preserve the existing Name tag."
+  }
+
+  assert {
+    condition     = length(aws_cloudfront_distribution.this[0].tags) == 1
+    error_message = "Production-compatible CloudFront configuration should not adopt additional CloudFront tags during import reconciliation."
   }
 
   assert {

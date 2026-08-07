@@ -68,6 +68,20 @@ variable "cloudfront_allowed_methods" {
   default     = ["GET", "HEAD"]
 }
 
+variable "cloudfront_cache_policy_id" {
+  description = "Cache policy ID matching the existing production CloudFront distribution."
+  type        = string
+  default     = null
+  nullable    = true
+}
+
+variable "cloudfront_tags" {
+  description = "CloudFront-specific tags matching the existing production distribution."
+  type        = map(string)
+  default     = null
+  nullable    = true
+}
+
 variable "cloudfront_comment" {
   description = "Comment matching the existing production CloudFront distribution."
   type        = string

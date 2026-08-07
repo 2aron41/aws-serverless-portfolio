@@ -86,12 +86,17 @@ resource "aws_cloudfront_distribution" "this" {
     target_origin_id       = local.cloudfront_origin_id
     viewer_protocol_policy = "redirect-to-https"
     compress               = true
+    cache_policy_id        = var.cloudfront_cache_policy_id
 
-    forwarded_values {
-      query_string = false
+    dynamic "forwarded_values" {
+      for_each = var.cloudfront_cache_policy_id == null ? [1] : []
 
-      cookies {
-        forward = "none"
+      content {
+        query_string = false
+
+        cookies {
+          forward = "none"
+        }
       }
     }
   }
@@ -106,7 +111,7 @@ resource "aws_cloudfront_distribution" "this" {
     cloudfront_default_certificate = true
   }
 
-  tags = var.tags
+  tags = var.cloudfront_tags == null ? var.tags : var.cloudfront_tags
 }
 
 data "aws_iam_policy_document" "cloudfront_s3_read" {
