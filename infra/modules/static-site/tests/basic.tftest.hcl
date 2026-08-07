@@ -341,6 +341,11 @@ run "plan_cloudfront_when_enabled" {
   }
 
   assert {
+    condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx) == 0
+    error_message = "CloudFront 5xx alarm should remain disabled unless explicitly enabled."
+  }
+
+  assert {
     condition     = output.cloudfront_distribution_id != null
     error_message = "CloudFront distribution ID output should not be null when CloudFront is enabled."
   }
@@ -356,6 +361,87 @@ run "plan_cloudfront_when_enabled" {
   }
 }
 
+
+run "plan_cloudfront_5xx_alarm" {
+  command = plan
+
+  variables {
+    bucket_name                 = "day30-cloudfront-alarm-test"
+    environment                 = "dev"
+    enable_versioning           = true
+    enable_encryption           = true
+    enable_cloudfront           = true
+    enable_cloudfront_5xx_alarm = true
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx) == 1
+    error_message = "Exactly one CloudFront 5xx alarm should be planned when monitoring is enabled."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].alarm_name == "day30-cloudfront-alarm-test-cloudfront-5xx-error-rate"
+    error_message = "CloudFront 5xx alarm should use the expected deterministic name."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].namespace == "AWS/CloudFront"
+    error_message = "Alarm should monitor the AWS/CloudFront namespace."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].metric_name == "5xxErrorRate"
+    error_message = "Alarm should monitor CloudFront 5xxErrorRate."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].statistic == "Average"
+    error_message = "CloudFront 5xx alarm should use the Average statistic."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].period == 300
+    error_message = "CloudFront 5xx alarm should use five-minute periods."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].threshold == 5
+    error_message = "CloudFront 5xx alarm threshold should be 5 percent."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].evaluation_periods == 3
+    error_message = "CloudFront 5xx alarm should evaluate three periods."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].datapoints_to_alarm == 2
+    error_message = "CloudFront 5xx alarm should require two breaching datapoints."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].comparison_operator == "GreaterThanOrEqualToThreshold"
+    error_message = "CloudFront 5xx alarm should trigger at or above the configured threshold."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].treat_missing_data == "notBreaching"
+    error_message = "Missing CloudFront datapoints should be treated as non-breaching."
+  }
+
+  assert {
+    condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].dimensions["Region"] == "Global"
+    error_message = "CloudFront alarm should use the Global metric dimension."
+  }
+}
 
 run "plan_production_compatible_cloudfront_methods" {
   command = plan

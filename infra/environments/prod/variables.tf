@@ -57,6 +57,12 @@ variable "enable_cloudfront" {
   default     = true
 }
 
+variable "enable_cloudfront_5xx_alarm" {
+  description = "Whether production should create the initial CloudFront 5xx CloudWatch alarm."
+  type        = bool
+  default     = true
+}
+
 variable "default_root_object" {
   description = "Default object CloudFront returns for root requests."
   type        = string

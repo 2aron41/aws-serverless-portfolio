@@ -19,6 +19,7 @@ module "static_site" {
   enable_versioning                    = var.enable_versioning
   enable_encryption                    = var.enable_encryption
   enable_cloudfront                    = var.enable_cloudfront
+  enable_cloudfront_5xx_alarm          = var.enable_cloudfront_5xx_alarm
   default_root_object                  = var.default_root_object
   cloudfront_price_class               = var.cloudfront_price_class
   cloudfront_allowed_methods           = var.cloudfront_allowed_methods

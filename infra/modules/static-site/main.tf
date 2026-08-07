@@ -161,3 +161,30 @@ resource "aws_s3_bucket_policy" "cloudfront" {
     aws_s3_bucket_public_access_block.this,
   ]
 }
+
+
+resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
+  count = var.enable_cloudfront && var.enable_cloudfront_5xx_alarm ? 1 : 0
+
+  alarm_name        = "${var.bucket_name}-cloudfront-5xx-error-rate"
+  alarm_description = "CloudFront 5xx error rate is elevated for the static site."
+
+  namespace   = "AWS/CloudFront"
+  metric_name = "5xxErrorRate"
+  statistic   = "Average"
+  period      = 300
+
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 5
+  evaluation_periods  = 3
+  datapoints_to_alarm = 2
+
+  treat_missing_data = "notBreaching"
+
+  dimensions = {
+    DistributionId = aws_cloudfront_distribution.this[0].id
+    Region         = "Global"
+  }
+
+  tags = var.tags
+}

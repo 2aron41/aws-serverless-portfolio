@@ -13,7 +13,8 @@ s3_bucket_tags = {}
 # Match the existing production configuration before proposing improvements.
 enable_versioning      = false
 enable_encryption      = true
-enable_cloudfront      = true
+enable_cloudfront           = true
+enable_cloudfront_5xx_alarm = true
 default_root_object    = "index.html"
 cloudfront_price_class   = "PriceClass_All"
 cloudfront_allowed_methods = ["GET", "HEAD"]

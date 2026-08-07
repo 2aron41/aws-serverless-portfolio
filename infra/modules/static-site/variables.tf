@@ -213,6 +213,12 @@ variable "cloudfront_source_arn_condition_test" {
   }
 }
 
+variable "enable_cloudfront_5xx_alarm" {
+  description = "Whether to create a CloudWatch alarm for elevated CloudFront 5xx error rate."
+  type        = bool
+  default     = false
+}
+
 variable "cloudfront_price_class" {
   description = "CloudFront price class for edge locations."
   type        = string
