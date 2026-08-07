@@ -397,7 +397,7 @@ run "plan_production_compatible_cloudfront_methods" {
   }
 
   assert {
-    condition     = aws_s3_bucket_versioning.this.versioning_configuration[0].status == "Suspended"
+    condition     = aws_s3_bucket_versioning.this.versioning_configuration[0].status == "Disabled"
     error_message = "Production-compatible configuration should keep versioning disabled before import."
   }
 
