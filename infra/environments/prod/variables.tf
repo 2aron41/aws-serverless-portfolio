@@ -63,6 +63,12 @@ variable "enable_cloudfront_5xx_alarm" {
   default     = true
 }
 
+variable "enable_cloudfront_alarm_notifications" {
+  description = "Whether production should create the SNS notification topic and connect alarm actions."
+  type        = bool
+  default     = true
+}
+
 variable "default_root_object" {
   description = "Default object CloudFront returns for root requests."
   type        = string

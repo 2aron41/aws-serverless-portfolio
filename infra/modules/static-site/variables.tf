@@ -219,6 +219,12 @@ variable "enable_cloudfront_5xx_alarm" {
   default     = false
 }
 
+variable "enable_cloudfront_alarm_notifications" {
+  description = "Whether to create an SNS topic and connect CloudFront alarm and recovery notifications."
+  type        = bool
+  default     = false
+}
+
 variable "cloudfront_price_class" {
   description = "CloudFront price class for edge locations."
   type        = string

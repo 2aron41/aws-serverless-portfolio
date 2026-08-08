@@ -163,6 +163,19 @@ resource "aws_s3_bucket_policy" "cloudfront" {
 }
 
 
+resource "aws_sns_topic" "cloudfront_alerts" {
+  count = (
+    var.enable_cloudfront &&
+    var.enable_cloudfront_5xx_alarm &&
+    var.enable_cloudfront_alarm_notifications
+  ) ? 1 : 0
+
+  name = "${var.bucket_name}-cloudfront-alerts"
+
+  tags = var.tags
+}
+
+
 resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
   count = var.enable_cloudfront && var.enable_cloudfront_5xx_alarm ? 1 : 0
 
@@ -180,6 +193,14 @@ resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
   datapoints_to_alarm = 2
 
   treat_missing_data = "notBreaching"
+
+  alarm_actions = var.enable_cloudfront_alarm_notifications ? [
+    aws_sns_topic.cloudfront_alerts[0].arn,
+  ] : []
+
+  ok_actions = var.enable_cloudfront_alarm_notifications ? [
+    aws_sns_topic.cloudfront_alerts[0].arn,
+  ] : []
 
   dimensions = {
     DistributionId = aws_cloudfront_distribution.this[0].id

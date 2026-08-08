@@ -383,6 +383,21 @@ run "plan_cloudfront_5xx_alarm" {
   }
 
   assert {
+    condition     = length(aws_sns_topic.cloudfront_alerts) == 0
+    error_message = "SNS notification topic should remain disabled unless notifications are explicitly enabled."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx[0].alarm_actions) == 0
+    error_message = "CloudFront alarm should have no alarm actions when notifications are disabled."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx[0].ok_actions) == 0
+    error_message = "CloudFront alarm should have no OK actions when notifications are disabled."
+  }
+
+  assert {
     condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx) == 1
     error_message = "Exactly one CloudFront 5xx alarm should be planned when monitoring is enabled."
   }
@@ -440,6 +455,74 @@ run "plan_cloudfront_5xx_alarm" {
   assert {
     condition     = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].dimensions["Region"] == "Global"
     error_message = "CloudFront alarm should use the Global metric dimension."
+  }
+}
+
+run "plan_cloudfront_alarm_notifications" {
+  command = plan
+
+  override_resource {
+    target = aws_sns_topic.cloudfront_alerts[0]
+
+    values = {
+      arn = "arn:aws:sns:us-east-1:123456789012:day31-notification-test-cloudfront-alerts"
+    }
+
+    override_during = plan
+  }
+
+  variables {
+    bucket_name                           = "day31-notification-test"
+    environment                           = "dev"
+    enable_versioning                     = true
+    enable_encryption                     = true
+    enable_cloudfront                     = true
+    enable_cloudfront_5xx_alarm           = true
+    enable_cloudfront_alarm_notifications = true
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  assert {
+    condition     = length(aws_sns_topic.cloudfront_alerts) == 1
+    error_message = "Exactly one SNS notification topic should be planned when notifications are enabled."
+  }
+
+  assert {
+    condition     = aws_sns_topic.cloudfront_alerts[0].name == "day31-notification-test-cloudfront-alerts"
+    error_message = "SNS topic should use the expected deterministic name."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx[0].alarm_actions) == 1
+    error_message = "CloudFront alarm should have exactly one ALARM notification action."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx[0].ok_actions) == 1
+    error_message = "CloudFront alarm should have exactly one recovery notification action."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.cloudfront_5xx[0].alarm_actions,
+      aws_sns_topic.cloudfront_alerts[0].arn
+    )
+    error_message = "CloudFront ALARM action should target the SNS notification topic."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.cloudfront_5xx[0].ok_actions,
+      aws_sns_topic.cloudfront_alerts[0].arn
+    )
+    error_message = "CloudFront OK action should target the SNS notification topic."
   }
 }
 
