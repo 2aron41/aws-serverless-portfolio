@@ -176,6 +176,48 @@ resource "aws_sns_topic" "cloudfront_alerts" {
 }
 
 
+resource "aws_sns_topic_policy" "cloudfront_alerts" {
+  count = (
+    var.enable_cloudfront &&
+    var.enable_cloudfront_5xx_alarm &&
+    var.enable_cloudfront_alarm_notifications
+  ) ? 1 : 0
+
+  arn = aws_sns_topic.cloudfront_alerts[0].arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+
+    Statement = [
+      {
+        Sid    = "AllowCloudWatchAlarmPublish"
+        Effect = "Allow"
+
+        Principal = {
+          Service = "cloudwatch.amazonaws.com"
+        }
+
+        Action   = "SNS:Publish"
+        Resource = aws_sns_topic.cloudfront_alerts[0].arn
+
+        Condition = {
+          ArnEquals = {
+            "aws:SourceArn" = aws_cloudwatch_metric_alarm.cloudfront_5xx[0].arn
+          }
+
+          StringEquals = {
+            "aws:SourceAccount" = split(
+              ":",
+              aws_cloudwatch_metric_alarm.cloudfront_5xx[0].arn
+            )[4]
+          }
+        }
+      }
+    ]
+  })
+}
+
+
 resource "aws_cloudwatch_metric_alarm" "cloudfront_5xx" {
   count = var.enable_cloudfront && var.enable_cloudfront_5xx_alarm ? 1 : 0
 

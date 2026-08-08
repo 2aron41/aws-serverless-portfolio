@@ -387,6 +387,12 @@ run "plan_cloudfront_5xx_alarm" {
     error_message = "SNS notification topic should remain disabled unless notifications are explicitly enabled."
   }
 
+
+  assert {
+    condition     = length(aws_sns_topic_policy.cloudfront_alerts) == 0
+    error_message = "SNS topic policy should remain disabled when notifications are disabled."
+  }
+
   assert {
     condition     = length(aws_cloudwatch_metric_alarm.cloudfront_5xx[0].alarm_actions) == 0
     error_message = "CloudFront alarm should have no alarm actions when notifications are disabled."
@@ -492,6 +498,12 @@ run "plan_cloudfront_alarm_notifications" {
   assert {
     condition     = length(aws_sns_topic.cloudfront_alerts) == 1
     error_message = "Exactly one SNS notification topic should be planned when notifications are enabled."
+  }
+
+
+  assert {
+    condition     = length(aws_sns_topic_policy.cloudfront_alerts) == 1
+    error_message = "Exactly one SNS topic policy should be planned when notifications are enabled."
   }
 
   assert {
