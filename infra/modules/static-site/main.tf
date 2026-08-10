@@ -115,7 +115,10 @@ resource "aws_cloudfront_distribution" "this" {
 }
 
 data "aws_iam_policy_document" "cloudfront_s3_read" {
-  count = var.enable_cloudfront ? 1 : 0
+  count = (
+    var.enable_cloudfront &&
+    var.cloudfront_policy_source_arn == null
+  ) ? 1 : 0
 
   policy_id = var.cloudfront_policy_id
   version   = var.cloudfront_policy_version
@@ -151,11 +154,56 @@ data "aws_iam_policy_document" "cloudfront_s3_read" {
   }
 }
 
+data "aws_iam_policy_document" "cloudfront_s3_read_explicit" {
+  count = (
+    var.enable_cloudfront &&
+    var.cloudfront_policy_source_arn != null
+  ) ? 1 : 0
+
+  policy_id = var.cloudfront_policy_id
+  version   = var.cloudfront_policy_version
+
+  statement {
+    sid    = var.cloudfront_policy_sid
+    effect = "Allow"
+
+    actions = [
+      "s3:GetObject",
+    ]
+
+    resources = [
+      "arn:${split(":", var.cloudfront_policy_source_arn)[1]}:s3:::${var.bucket_name}/*",
+    ]
+
+    principals {
+      type = "Service"
+
+      identifiers = [
+        "cloudfront.amazonaws.com",
+      ]
+    }
+
+    condition {
+      test     = var.cloudfront_source_arn_condition_test
+      variable = "AWS:SourceArn"
+
+      values = [
+        var.cloudfront_policy_source_arn,
+      ]
+    }
+  }
+}
+
+
 resource "aws_s3_bucket_policy" "cloudfront" {
   count = var.enable_cloudfront ? 1 : 0
 
   bucket = aws_s3_bucket.this.id
-  policy = data.aws_iam_policy_document.cloudfront_s3_read[0].json
+  policy = var.cloudfront_policy_source_arn == null ? (
+    data.aws_iam_policy_document.cloudfront_s3_read[0].json
+    ) : (
+    data.aws_iam_policy_document.cloudfront_s3_read_explicit[0].json
+  )
 
   depends_on = [
     aws_s3_bucket_public_access_block.this,

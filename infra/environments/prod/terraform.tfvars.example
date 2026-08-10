@@ -6,8 +6,8 @@ github_username = "2aron41"
 # Existing production bucket identified during Day 25 inventory.
 bucket_name = "replace-with-existing-production-bucket-name"
 
-# Preserve existing bucket tags during import reconciliation.
-# Adopt governance tags only after the imported configuration is stable.
+# Optional S3-specific tags.
+# Production main.tf merges these with the required workload governance tags.
 s3_bucket_tags = {}
 
 # Match the existing production configuration before proposing improvements.
@@ -21,6 +21,8 @@ cloudfront_price_class   = "PriceClass_All"
 cloudfront_allowed_methods = ["GET", "HEAD"]
 cloudfront_cache_policy_id = "replace-with-existing-production-cache-policy-id"
 
+# Preserve CloudFront-specific tags such as Name.
+# Production main.tf also adds the required workload governance tags.
 cloudfront_tags = {
   Name = "replace-with-existing-production-cloudfront-name-tag"
 }
@@ -35,6 +37,10 @@ cloudfront_oac_description           = "Created by CloudFront"
 cloudfront_policy_id      = "replace-with-existing-production-policy-id"
 cloudfront_policy_version = "2008-10-17"
 cloudfront_policy_sid     = "replace-with-existing-production-policy-sid"
+
+# Supply the existing distribution ARN after production import.
+# This keeps metadata-only changes from causing unrelated policy writes.
+cloudfront_policy_source_arn = "arn:aws:cloudfront::123456789012:distribution/REPLACEWITHDISTRIBUTIONID"
 
 cloudfront_source_arn_condition_test = "ArnLike"
 

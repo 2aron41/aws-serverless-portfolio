@@ -659,6 +659,115 @@ run "plan_production_compatible_cloudfront_methods" {
   }
 }
 
+run "plan_explicit_cloudfront_policy_source_arn" {
+  command = plan
+
+  # aws_iam_policy_document.json is a computed provider value.
+  # The mocked AWS provider otherwise generates an arbitrary string,
+  # which aws_s3_bucket_policy correctly rejects as invalid JSON.
+  override_data {
+    target = data.aws_iam_policy_document.cloudfront_s3_read_explicit[0]
+
+    values = {
+      json = jsonencode({
+        Id      = "PolicyForCloudFrontPrivateContent"
+        Version = "2008-10-17"
+
+        Statement = [
+          {
+            Sid      = "AllowCloudFrontServicePrincipal"
+            Effect   = "Allow"
+            Action   = "s3:GetObject"
+            Resource = "arn:aws:s3:::day33-policy-source-test/*"
+
+            Principal = {
+              Service = "cloudfront.amazonaws.com"
+            }
+
+            Condition = {
+              ArnLike = {
+                "AWS:SourceArn" = "arn:aws:cloudfront::123456789012:distribution/E1234567890ABC"
+              }
+            }
+          }
+        ]
+      })
+    }
+
+    override_during = plan
+  }
+
+  variables {
+    bucket_name                          = "day33-policy-source-test"
+    environment                          = "prod"
+    enable_cloudfront                    = true
+    cloudfront_policy_source_arn         = "arn:aws:cloudfront::123456789012:distribution/E1234567890ABC"
+    cloudfront_policy_id                 = "PolicyForCloudFrontPrivateContent"
+    cloudfront_policy_version            = "2008-10-17"
+    cloudfront_policy_sid                = "AllowCloudFrontServicePrincipal"
+    cloudfront_source_arn_condition_test = "ArnLike"
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "prod"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "policy-decoupling-test"
+    }
+  }
+
+  assert {
+    condition     = length(data.aws_iam_policy_document.cloudfront_s3_read) == 0
+    error_message = "Explicit policy SourceArn mode should disable the resource-dependent policy document."
+  }
+
+  assert {
+    condition     = length(data.aws_iam_policy_document.cloudfront_s3_read_explicit) == 1
+    error_message = "Explicit policy SourceArn mode should create exactly one decoupled policy document."
+  }
+
+  assert {
+    condition = contains(
+      data.aws_iam_policy_document.cloudfront_s3_read_explicit[0].statement[0].resources,
+      "arn:aws:s3:::day33-policy-source-test/*"
+    )
+    error_message = "Explicit policy mode should derive the S3 ARN without referencing the managed bucket resource."
+  }
+
+  assert {
+    condition = contains(
+      one(
+        data.aws_iam_policy_document.cloudfront_s3_read_explicit[0].statement[0].condition
+      ).values,
+      "arn:aws:cloudfront::123456789012:distribution/E1234567890ABC"
+    )
+    error_message = "Explicit policy mode should use the supplied CloudFront distribution ARN."
+  }
+}
+
+run "reject_invalid_cloudfront_policy_source_arn" {
+  command = plan
+
+  variables {
+    bucket_name                  = "day33-invalid-policy-source-test"
+    environment                  = "dev"
+    enable_cloudfront            = true
+    cloudfront_policy_source_arn = "not-a-cloudfront-arn"
+
+    tags = {
+      Project     = "aws-serverless-portfolio"
+      Environment = "dev"
+      ManagedBy   = "Terraform"
+      Owner       = "Aaron"
+      Purpose     = "terraform-testing"
+    }
+  }
+
+  expect_failures = [
+    var.cloudfront_policy_source_arn,
+  ]
+}
+
 run "reject_invalid_cloudfront_allowed_method" {
   command = plan
 

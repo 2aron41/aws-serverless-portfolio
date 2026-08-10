@@ -142,6 +142,25 @@ variable "cloudfront_policy_sid" {
   default     = "AllowCloudFrontReadOnly"
 }
 
+variable "cloudfront_policy_source_arn" {
+  description = "Explicit existing production CloudFront distribution ARN used by the S3 bucket policy."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.cloudfront_policy_source_arn == null ||
+      can(regex(
+        "^arn:[^:]+:cloudfront::[0-9]{12}:distribution/.+$",
+        trimspace(var.cloudfront_policy_source_arn)
+      ))
+    )
+
+    error_message = "Production CloudFront policy SourceArn must be null or a valid CloudFront distribution ARN."
+  }
+}
+
 variable "cloudfront_source_arn_condition_test" {
   description = "Bucket-policy SourceArn condition operator matching production."
   type        = string
