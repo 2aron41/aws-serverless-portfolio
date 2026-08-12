@@ -9,3 +9,6 @@ tfplan
 crash.log
 crash.*.log
 .terraform.tfstate.lock.info
+
+# Local Python virtual environment
+.venv/
