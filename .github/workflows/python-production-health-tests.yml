@@ -1,0 +1,53 @@
+name: Python Production Health Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "scripts/aws_production_health.py"
+      - "tests/test_aws_production_health.py"
+      - "requirements.txt"
+      - ".github/workflows/python-production-health-tests.yml"
+
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "scripts/aws_production_health.py"
+      - "tests/test_aws_production_health.py"
+      - "requirements.txt"
+      - ".github/workflows/python-production-health-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  python-health-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+
+      - name: Python syntax check
+        run: |
+          python -m py_compile \
+            scripts/aws_production_health.py \
+            tests/test_aws_production_health.py
+
+      - name: Run production health unit tests
+        run: |
+          python -m unittest \
+            -v \
+            tests/test_aws_production_health.py
