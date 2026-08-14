@@ -4,8 +4,12 @@ output "enabled" {
 }
 
 output "api_endpoint" {
-  description = "HTTP API endpoint when the inquiry workload is enabled."
-  value       = null
+  description = "POST inquiry endpoint when the inquiry workload is enabled."
+  value = (
+    var.enable_inquiry
+    ? "${aws_apigatewayv2_api.inquiry[0].api_endpoint}/inquiries"
+    : null
+  )
 }
 
 output "lambda_function_name" {

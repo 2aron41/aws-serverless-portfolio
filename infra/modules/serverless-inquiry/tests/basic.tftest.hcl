@@ -19,6 +19,27 @@ mock_provider "aws" {
       arn = "arn:aws:iam::123456789012:role/mock-inquiry-exec"
     }
   }
+
+
+  mock_resource "aws_lambda_function" {
+    defaults = {
+      invoke_arn = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456789012:function:mock-inquiry/invocations"
+    }
+  }
+
+  mock_resource "aws_apigatewayv2_api" {
+    defaults = {
+      id            = "mockapi123"
+      execution_arn = "arn:aws:execute-api:us-east-1:123456789012:mockapi123"
+      api_endpoint  = "https://mockapi123.execute-api.us-east-1.amazonaws.com"
+    }
+  }
+
+  mock_resource "aws_apigatewayv2_integration" {
+    defaults = {
+      id = "mock-integration-id"
+    }
+  }
 }
 
 run "disabled_by_default" {
@@ -71,6 +92,7 @@ run "sns_topic_created_when_enabled" {
 
   variables {
     enable_inquiry = true
+    allowed_origin = "https://portfolio.example"
     project_name   = "portfolio-test"
     environment    = "dev"
     owner          = "2aron41"
@@ -136,6 +158,7 @@ run "lambda_iam_is_least_privilege_when_enabled" {
 
   variables {
     enable_inquiry     = true
+    allowed_origin     = "https://portfolio.example"
     project_name       = "portfolio-test"
     environment        = "dev"
     owner              = "2aron41"
@@ -280,6 +303,7 @@ run "lambda_configuration_when_enabled" {
 
   variables {
     enable_inquiry = true
+    allowed_origin = "https://portfolio.example"
     project_name   = "portfolio-test"
     environment    = "dev"
     owner          = "2aron41"
@@ -390,4 +414,252 @@ run "lambda_configuration_when_enabled" {
     )
     error_message = "Lambda source hash must match the deployment package."
   }
+}
+
+run "http_api_absent_when_disabled" {
+  command = plan
+
+  assert {
+    condition     = length(aws_apigatewayv2_api.inquiry) == 0
+    error_message = "HTTP API must not exist when inquiry is disabled."
+  }
+
+  assert {
+    condition     = length(aws_apigatewayv2_integration.inquiry) == 0
+    error_message = "HTTP API integration must not exist when inquiry is disabled."
+  }
+
+  assert {
+    condition     = length(aws_apigatewayv2_route.inquiry) == 0
+    error_message = "HTTP API route must not exist when inquiry is disabled."
+  }
+
+  assert {
+    condition     = length(aws_apigatewayv2_stage.inquiry) == 0
+    error_message = "HTTP API stage must not exist when inquiry is disabled."
+  }
+
+  assert {
+    condition     = length(aws_lambda_permission.inquiry_api) == 0
+    error_message = "API Gateway Lambda permission must not exist when inquiry is disabled."
+  }
+}
+
+run "http_api_configuration_when_enabled" {
+  command = plan
+
+  variables {
+    enable_inquiry = true
+    allowed_origin = "https://portfolio.example"
+    project_name   = "portfolio-test"
+    environment    = "dev"
+    owner          = "2aron41"
+  }
+
+  assert {
+    condition     = length(aws_apigatewayv2_api.inquiry) == 1
+    error_message = "Exactly one HTTP API must exist."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_api.inquiry[0].protocol_type
+      == "HTTP"
+    )
+    error_message = "Inquiry API must be an HTTP API."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_apigatewayv2_api.inquiry[0]
+        .cors_configuration[0]
+        .allow_origins
+      ) == 1
+      &&
+      contains(
+        aws_apigatewayv2_api.inquiry[0]
+        .cors_configuration[0]
+        .allow_origins,
+        "https://portfolio.example",
+      )
+    )
+    error_message = "CORS must allow exactly the configured portfolio origin."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_apigatewayv2_api.inquiry[0]
+        .cors_configuration[0]
+        .allow_methods
+      ) == 1
+      &&
+      contains(
+        aws_apigatewayv2_api.inquiry[0]
+        .cors_configuration[0]
+        .allow_methods,
+        "POST",
+      )
+    )
+    error_message = "CORS must allow only POST."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_apigatewayv2_api.inquiry[0]
+        .cors_configuration[0]
+        .allow_headers
+      ) == 1
+      &&
+      contains(
+        aws_apigatewayv2_api.inquiry[0]
+        .cors_configuration[0]
+        .allow_headers,
+        "content-type",
+      )
+    )
+    error_message = "CORS must allow only content-type."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_integration.inquiry[0]
+      .integration_type
+      == "AWS_PROXY"
+    )
+    error_message = "Lambda integration must use AWS_PROXY."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_integration.inquiry[0]
+      .integration_method
+      == "POST"
+    )
+    error_message = "Lambda integration method must be POST."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_integration.inquiry[0]
+      .payload_format_version
+      == "2.0"
+    )
+    error_message = "HTTP API must use payload format 2.0."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_integration.inquiry[0]
+      .timeout_milliseconds
+      == 5000
+    )
+    error_message = "API integration timeout must be 5000 ms."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_route.inquiry[0].route_key
+      == "POST /inquiries"
+    )
+    error_message = "Only POST /inquiries should be configured."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_route.inquiry[0].authorization_type
+      == "NONE"
+    )
+    error_message = "Inquiry route must be publicly callable."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_route.inquiry[0].target
+      == "integrations/mock-integration-id"
+    )
+    error_message = "Route must target the Lambda integration."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_stage.inquiry[0].name
+      == "$default"
+    )
+    error_message = "HTTP API must use the default stage."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_stage.inquiry[0].auto_deploy
+      == true
+    )
+    error_message = "HTTP API default stage must auto-deploy."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_stage.inquiry[0]
+      .default_route_settings[0]
+      .throttling_burst_limit
+      == 2
+    )
+    error_message = "HTTP API burst throttle must be 2."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_stage.inquiry[0]
+      .default_route_settings[0]
+      .throttling_rate_limit
+      == 1
+    )
+    error_message = "HTTP API rate throttle must be 1 request per second."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api[0].principal
+      == "apigateway.amazonaws.com"
+    )
+    error_message = "Only API Gateway should receive invoke permission."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api[0].action
+      == "lambda:InvokeFunction"
+    )
+    error_message = "Permission must allow only Lambda invocation."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api[0].source_arn
+      == "arn:aws:execute-api:us-east-1:123456789012:mockapi123/$default/POST/inquiries"
+    )
+    error_message = "Invoke permission must be scoped to default-stage POST /inquiries."
+  }
+
+  assert {
+    condition = (
+      output.api_endpoint
+      == "https://mockapi123.execute-api.us-east-1.amazonaws.com/inquiries"
+    )
+    error_message = "API output must resolve to /inquiries."
+  }
+}
+
+run "reject_insecure_allowed_origin" {
+  command = plan
+
+  variables {
+    allowed_origin = "http://portfolio.example"
+  }
+
+  expect_failures = [
+    var.allowed_origin,
+  ]
 }

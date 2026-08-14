@@ -50,3 +50,23 @@ variable "log_retention_days" {
     error_message = "log_retention_days must be 7, 14, 30, 60, or 90."
   }
 }
+
+variable "allowed_origin" {
+  description = "HTTPS browser origin allowed to submit portfolio inquiries."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      var.allowed_origin == ""
+      ||
+      can(
+        regex(
+          "^https://[A-Za-z0-9.-]+(:[0-9]{1,5})?$",
+          var.allowed_origin,
+        )
+      )
+    )
+    error_message = "allowed_origin must be empty or a single HTTPS origin without a path."
+  }
+}
