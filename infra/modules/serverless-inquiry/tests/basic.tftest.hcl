@@ -663,3 +663,118 @@ run "reject_insecure_allowed_origin" {
     var.allowed_origin,
   ]
 }
+
+run "api_access_logging_absent_when_disabled" {
+  command = plan
+
+  assert {
+    condition     = length(aws_cloudwatch_log_group.inquiry_api_access) == 0
+    error_message = "API access log group must not exist while inquiry is disabled."
+  }
+}
+
+run "api_access_logging_is_privacy_safe_when_enabled" {
+  command = plan
+
+  variables {
+    enable_inquiry     = true
+    allowed_origin     = "https://portfolio.example"
+    project_name       = "portfolio-test"
+    environment        = "dev"
+    owner              = "2aron41"
+    log_retention_days = 14
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_log_group.inquiry_api_access) == 1
+    error_message = "Exactly one API access log group must exist."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_log_group.inquiry_api_access[0].name
+      == "/aws/apigateway/portfolio-test-dev-inquiry-access"
+    )
+    error_message = "API access log group name is incorrect."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_log_group.inquiry_api_access[0].retention_in_days
+      == 14
+    )
+    error_message = "API access logs must use the configured retention period."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_apigatewayv2_stage.inquiry[0].access_log_settings
+      ) == 1
+    )
+    error_message = "HTTP API stage must have access logging enabled."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_stage.inquiry[0]
+      .access_log_settings[0]
+      .destination_arn
+      == aws_cloudwatch_log_group.inquiry_api_access[0].arn
+    )
+    error_message = "HTTP API access logs must use the dedicated log group."
+  }
+
+  assert {
+    condition = (
+      jsondecode(
+        aws_apigatewayv2_stage.inquiry[0]
+        .access_log_settings[0]
+        .format
+      ).requestId
+      == "$context.requestId"
+    )
+    error_message = "Access log format must contain the API Gateway request ID."
+  }
+
+  assert {
+    condition = (
+      toset(
+        keys(
+          jsondecode(
+            aws_apigatewayv2_stage.inquiry[0]
+            .access_log_settings[0]
+            .format
+          )
+        )
+      )
+      ==
+      toset([
+        "requestId",
+        "requestTimeEpoch",
+        "httpMethod",
+        "routeKey",
+        "status",
+        "responseLength",
+        "integrationLatency",
+        "responseLatency",
+        "integrationStatus",
+      ])
+    )
+    error_message = "API access logs must contain only the approved metadata fields."
+  }
+
+  assert {
+    condition = !can(
+      regex(
+        "body|email|message|sourceip|useragent|querystring|integrationerrormessage",
+        lower(
+          aws_apigatewayv2_stage.inquiry[0]
+          .access_log_settings[0]
+          .format
+        ),
+      )
+    )
+    error_message = "API access logs must not contain visitor content or sensitive request metadata."
+  }
+}

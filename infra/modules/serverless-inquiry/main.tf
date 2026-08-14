@@ -2,6 +2,18 @@ locals {
   lambda_function_name = "${var.project_name}-${var.environment}-inquiry"
   inquiry_topic_name   = "${var.project_name}-${var.environment}-inquiries"
 
+  api_access_log_format = jsonencode({
+    requestId          = "$context.requestId"
+    requestTimeEpoch   = "$context.requestTimeEpoch"
+    httpMethod         = "$context.httpMethod"
+    routeKey           = "$context.routeKey"
+    status             = "$context.status"
+    responseLength     = "$context.responseLength"
+    integrationLatency = "$context.integrationLatency"
+    responseLatency    = "$context.responseLatency"
+    integrationStatus  = "$context.integrationStatus"
+  })
+
   common_tags = {
     Project     = var.project_name
     Environment = var.environment
@@ -191,6 +203,15 @@ resource "aws_apigatewayv2_route" "inquiry" {
   target = "integrations/${aws_apigatewayv2_integration.inquiry[0].id}"
 }
 
+resource "aws_cloudwatch_log_group" "inquiry_api_access" {
+  count = var.enable_inquiry ? 1 : 0
+
+  name              = "/aws/apigateway/${local.lambda_function_name}-access"
+  retention_in_days = var.log_retention_days
+
+  tags = local.common_tags
+}
+
 resource "aws_apigatewayv2_stage" "inquiry" {
   count = var.enable_inquiry ? 1 : 0
 
@@ -202,6 +223,11 @@ resource "aws_apigatewayv2_stage" "inquiry" {
   default_route_settings {
     throttling_burst_limit = 2
     throttling_rate_limit  = 1
+  }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.inquiry_api_access[0].arn
+    format          = local.api_access_log_format
   }
 
   tags = local.common_tags
