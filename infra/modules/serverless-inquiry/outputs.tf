@@ -10,7 +10,11 @@ output "api_endpoint" {
 
 output "lambda_function_name" {
   description = "Inquiry Lambda function name when enabled."
-  value       = null
+  value = (
+    var.enable_inquiry
+    ? aws_lambda_function.inquiry[0].function_name
+    : null
+  )
 }
 
 output "sns_topic_arn" {

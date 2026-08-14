@@ -12,6 +12,13 @@ mock_provider "aws" {
       arn = "arn:aws:logs:us-east-1:123456789012:log-group:/aws/lambda/mock-inquiry"
     }
   }
+
+
+  mock_resource "aws_iam_role" {
+    defaults = {
+      arn = "arn:aws:iam::123456789012:role/mock-inquiry-exec"
+    }
+  }
 }
 
 run "disabled_by_default" {
@@ -252,4 +259,135 @@ run "reject_invalid_log_retention" {
   expect_failures = [
     var.log_retention_days,
   ]
+}
+
+run "lambda_absent_when_disabled" {
+  command = plan
+
+  assert {
+    condition     = length(data.archive_file.inquiry_lambda) == 0
+    error_message = "Lambda archive must not be built when inquiry is disabled."
+  }
+
+  assert {
+    condition     = length(aws_lambda_function.inquiry) == 0
+    error_message = "Lambda function must not exist when inquiry is disabled."
+  }
+}
+
+run "lambda_configuration_when_enabled" {
+  command = plan
+
+  variables {
+    enable_inquiry = true
+    project_name   = "portfolio-test"
+    environment    = "dev"
+    owner          = "2aron41"
+  }
+
+  assert {
+    condition     = length(data.archive_file.inquiry_lambda) == 1
+    error_message = "Exactly one Lambda archive must be created."
+  }
+
+  assert {
+    condition     = length(aws_lambda_function.inquiry) == 1
+    error_message = "Exactly one Lambda function must exist."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].function_name
+      == "portfolio-test-dev-inquiry"
+    )
+    error_message = "Lambda function name is incorrect."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].handler
+      == "inquiry_handler.lambda_handler"
+    )
+    error_message = "Lambda handler is incorrect."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].runtime
+      == "python3.12"
+    )
+    error_message = "Lambda runtime must be Python 3.12."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_lambda_function.inquiry[0].architectures
+      ) == 1
+      &&
+      contains(
+        aws_lambda_function.inquiry[0].architectures,
+        "x86_64",
+      )
+    )
+    error_message = "Lambda architecture must be exactly x86_64."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].memory_size
+      == 128
+    )
+    error_message = "Lambda memory must be 128 MB."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].timeout
+      == 5
+    )
+    error_message = "Lambda timeout must be 5 seconds."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].reserved_concurrent_executions
+      == 2
+    )
+    error_message = "Lambda reserved concurrency must be 2."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].role
+      == "arn:aws:iam::123456789012:role/mock-inquiry-exec"
+    )
+    error_message = "Lambda must use the dedicated execution role."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0]
+      .environment[0]
+      .variables["INQUIRY_TOPIC_ARN"]
+      == "arn:aws:sns:us-east-1:123456789012:mock-inquiries"
+    )
+    error_message = "Lambda must receive only the inquiry SNS topic ARN."
+  }
+
+  assert {
+    condition = (
+      data.archive_file.inquiry_lambda[0].output_base64sha256
+      != ""
+    )
+    error_message = "Lambda package hash must be generated."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].source_code_hash
+      == data.archive_file.inquiry_lambda[0].output_base64sha256
+    )
+    error_message = "Lambda source hash must match the deployment package."
+  }
 }
