@@ -29,3 +29,47 @@ output "sns_topic_arn" {
     : null
   )
 }
+
+
+output "lambda_error_alarm_arn" {
+  description = "ARN of the inquiry Lambda error alarm when operational alarms are enabled."
+  value = (
+    var.enable_inquiry && var.enable_operational_alarms
+    ? aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].arn
+    : null
+  )
+}
+
+
+output "lambda_throttle_alarm_arn" {
+  description = "ARN of the inquiry Lambda throttle alarm when operational alarms are enabled."
+  value = (
+    var.enable_inquiry && var.enable_operational_alarms
+    ? aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].arn
+    : null
+  )
+}
+
+
+output "api_5xx_alarm_arn" {
+  description = "ARN of the inquiry API Gateway 5xx alarm when operational alarms are enabled."
+  value = (
+    var.enable_inquiry && var.enable_operational_alarms
+    ? aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].arn
+    : null
+  )
+}
+
+
+output "operational_alarm_arns" {
+  description = "ARNs of all inquiry operational alarms when enabled."
+  value = (
+    var.enable_inquiry && var.enable_operational_alarms
+    ? [
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].arn,
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].arn,
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].arn,
+    ]
+    : []
+  )
+}

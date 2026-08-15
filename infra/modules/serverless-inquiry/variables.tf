@@ -70,3 +70,24 @@ variable "allowed_origin" {
     error_message = "allowed_origin must be empty or a single HTTPS origin without a path."
   }
 }
+
+variable "enable_operational_alarms" {
+  description = "Whether to create CloudWatch operational alarms for the inquiry workload."
+  type        = bool
+  default     = false
+}
+
+variable "operational_alarm_topic_arn" {
+  description = "Optional SNS topic ARN for inquiry operational ALARM and OK notifications."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.operational_alarm_topic_arn == null ||
+      can(regex("^arn:aws[a-zA-Z-]*:sns:[a-z0-9-]+:[0-9]{12}:[A-Za-z0-9_-]+$", var.operational_alarm_topic_arn))
+    )
+    error_message = "operational_alarm_topic_arn must be null or a valid SNS topic ARN."
+  }
+}

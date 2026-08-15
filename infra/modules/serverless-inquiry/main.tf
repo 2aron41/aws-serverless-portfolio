@@ -243,3 +243,105 @@ resource "aws_lambda_permission" "inquiry_api" {
 
   source_arn = "${aws_apigatewayv2_api.inquiry[0].execution_arn}/$default/POST/inquiries"
 }
+
+
+resource "aws_cloudwatch_metric_alarm" "inquiry_lambda_errors" {
+  count = var.enable_inquiry && var.enable_operational_alarms ? 1 : 0
+
+  alarm_name        = "${var.project_name}-${var.environment}-inquiry-lambda-errors"
+  alarm_description = "Inquiry Lambda reported one or more execution errors."
+
+  namespace   = "AWS/Lambda"
+  metric_name = "Errors"
+  statistic   = "Sum"
+  period      = 300
+
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 1
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
+
+  treat_missing_data = "notBreaching"
+
+  alarm_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  ok_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  dimensions = {
+    FunctionName = aws_lambda_function.inquiry[0].function_name
+  }
+
+  tags = local.common_tags
+}
+
+
+resource "aws_cloudwatch_metric_alarm" "inquiry_lambda_throttles" {
+  count = var.enable_inquiry && var.enable_operational_alarms ? 1 : 0
+
+  alarm_name        = "${var.project_name}-${var.environment}-inquiry-lambda-throttles"
+  alarm_description = "Inquiry Lambda reported one or more throttled invocations."
+
+  namespace   = "AWS/Lambda"
+  metric_name = "Throttles"
+  statistic   = "Sum"
+  period      = 300
+
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 1
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
+
+  treat_missing_data = "notBreaching"
+
+  alarm_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  ok_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  dimensions = {
+    FunctionName = aws_lambda_function.inquiry[0].function_name
+  }
+
+  tags = local.common_tags
+}
+
+
+resource "aws_cloudwatch_metric_alarm" "inquiry_api_5xx" {
+  count = var.enable_inquiry && var.enable_operational_alarms ? 1 : 0
+
+  alarm_name        = "${var.project_name}-${var.environment}-inquiry-api-5xx"
+  alarm_description = "Inquiry API Gateway reported one or more server errors."
+
+  namespace   = "AWS/ApiGateway"
+  metric_name = "5xx"
+  statistic   = "Sum"
+  period      = 300
+
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = 1
+  evaluation_periods  = 1
+  datapoints_to_alarm = 1
+
+  treat_missing_data = "notBreaching"
+
+  alarm_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  ok_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  dimensions = {
+    ApiId = aws_apigatewayv2_api.inquiry[0].id
+  }
+
+  tags = local.common_tags
+}

@@ -778,3 +778,512 @@ run "api_access_logging_is_privacy_safe_when_enabled" {
     error_message = "API access logs must not contain visitor content or sensitive request metadata."
   }
 }
+
+
+run "inquiry_operational_alarms_disabled_by_default" {
+  command = plan
+
+  variables {
+    enable_inquiry = true
+    project_name   = "portfolio-test"
+    environment    = "dev"
+    owner          = "2aron41"
+    allowed_origin = "https://example.com"
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_lambda_errors) == 0
+    error_message = "Lambda error alarm must remain disabled by default."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_lambda_throttles) == 0
+    error_message = "Lambda throttle alarm must remain disabled by default."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_api_5xx) == 0
+    error_message = "API 5xx alarm must remain disabled by default."
+  }
+}
+
+
+run "inquiry_operational_alarms_enabled_without_notifications" {
+  command = plan
+
+  override_resource {
+    target = aws_apigatewayv2_api.inquiry[0]
+
+    values = {
+      id            = "mock-inquiry-api-id"
+      execution_arn = "arn:aws:execute-api:us-east-1:123456789012:mock-inquiry-api-id"
+    }
+
+    override_during = plan
+  }
+
+  variables {
+    enable_inquiry            = true
+    enable_operational_alarms = true
+    project_name              = "portfolio-test"
+    environment               = "dev"
+    owner                     = "2aron41"
+    allowed_origin            = "https://example.com"
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_lambda_errors) == 1
+    error_message = "Exactly one Lambda error alarm must be created."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_lambda_throttles) == 1
+    error_message = "Exactly one Lambda throttle alarm must be created."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_api_5xx) == 1
+    error_message = "Exactly one API 5xx alarm must be created."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].alarm_name
+      == "portfolio-test-dev-inquiry-lambda-errors"
+    )
+    error_message = "Lambda error alarm name is incorrect."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].namespace
+      == "AWS/Lambda"
+    )
+    error_message = "Lambda error alarm must use AWS/Lambda."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].metric_name
+      == "Errors"
+    )
+    error_message = "Lambda error alarm must monitor Errors."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].statistic
+      == "Sum"
+    )
+    error_message = "Lambda error alarm must use Sum."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].period
+      == 300
+    )
+    error_message = "Lambda error alarm must use a five-minute period."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].threshold
+      == 1
+    )
+    error_message = "Lambda error alarm threshold must be one."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].evaluation_periods
+      == 1
+    )
+    error_message = "Lambda error alarm must evaluate one period."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].datapoints_to_alarm
+      == 1
+    )
+    error_message = "Lambda error alarm must require one breaching datapoint."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].comparison_operator
+      == "GreaterThanOrEqualToThreshold"
+    )
+    error_message = "Lambda error alarm comparison operator is incorrect."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].treat_missing_data
+      == "notBreaching"
+    )
+    error_message = "Lambda error alarm must treat missing data as not breaching."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0]
+      .dimensions["FunctionName"]
+      == "portfolio-test-dev-inquiry"
+    )
+    error_message = "Lambda error alarm must target the inquiry Lambda."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].namespace
+      == "AWS/Lambda"
+    )
+    error_message = "Lambda throttle alarm must use AWS/Lambda."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].metric_name
+      == "Throttles"
+    )
+    error_message = "Lambda throttle alarm must monitor Throttles."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].threshold
+      == 1
+    )
+    error_message = "Lambda throttle alarm threshold must be one."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0]
+      .treat_missing_data
+      == "notBreaching"
+    )
+    error_message = "Lambda throttle alarm must treat missing data as not breaching."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0]
+      .dimensions["FunctionName"]
+      == "portfolio-test-dev-inquiry"
+    )
+    error_message = "Lambda throttle alarm must target the inquiry Lambda."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].namespace
+      == "AWS/ApiGateway"
+    )
+    error_message = "API 5xx alarm must use AWS/ApiGateway."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].metric_name
+      == "5xx"
+    )
+    error_message = "API alarm must monitor 5xx."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].statistic
+      == "Sum"
+    )
+    error_message = "API 5xx alarm must use Sum."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].threshold
+      == 1
+    )
+    error_message = "API 5xx alarm threshold must be one."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].evaluation_periods
+      == 1
+    )
+    error_message = "API 5xx alarm must evaluate one period."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].datapoints_to_alarm
+      == 1
+    )
+    error_message = "API 5xx alarm must require one breaching datapoint."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].treat_missing_data
+      == "notBreaching"
+    )
+    error_message = "API 5xx alarm must treat missing data as not breaching."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].dimensions["ApiId"]
+      == "mock-inquiry-api-id"
+    )
+    error_message = "API 5xx alarm must target the inquiry HTTP API."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].alarm_actions
+      )
+      == 0
+    )
+    error_message = "Lambda error alarm must have no notification action without a topic ARN."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].ok_actions
+      )
+      == 0
+    )
+    error_message = "Lambda error alarm must have no recovery action without a topic ARN."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].alarm_actions
+      )
+      == 0
+    )
+    error_message = "Lambda throttle alarm must have no notification action without a topic ARN."
+  }
+
+  assert {
+    condition = (
+      length(
+        aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].alarm_actions
+      )
+      == 0
+    )
+    error_message = "API 5xx alarm must have no notification action without a topic ARN."
+  }
+}
+
+
+run "inquiry_operational_alarms_enabled_with_notifications" {
+  command = plan
+
+  variables {
+    enable_inquiry              = true
+    enable_operational_alarms   = true
+    operational_alarm_topic_arn = "arn:aws:sns:us-east-1:123456789012:portfolio-operations"
+    project_name                = "portfolio-test"
+    environment                 = "dev"
+    owner                       = "2aron41"
+    allowed_origin              = "https://example.com"
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].alarm_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "Lambda error ALARM action must target the operational topic."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].ok_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "Lambda error OK action must target the operational topic."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].alarm_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "Lambda throttle ALARM action must target the operational topic."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].ok_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "Lambda throttle OK action must target the operational topic."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].alarm_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "API 5xx ALARM action must target the operational topic."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].ok_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "API 5xx OK action must target the operational topic."
+  }
+}
+
+
+run "reject_invalid_operational_alarm_topic_arn" {
+  command = plan
+
+  variables {
+    operational_alarm_topic_arn = "not-an-sns-arn"
+  }
+
+  expect_failures = [
+    var.operational_alarm_topic_arn,
+  ]
+}
+
+
+run "operational_alarm_outputs_disabled" {
+  command = plan
+
+  variables {
+    enable_inquiry = true
+    project_name   = "portfolio-test"
+    environment    = "dev"
+    owner          = "2aron41"
+    allowed_origin = "https://example.com"
+  }
+
+  assert {
+    condition     = output.lambda_error_alarm_arn == null
+    error_message = "Lambda error alarm ARN must be null when operational alarms are disabled."
+  }
+
+  assert {
+    condition     = output.lambda_throttle_alarm_arn == null
+    error_message = "Lambda throttle alarm ARN must be null when operational alarms are disabled."
+  }
+
+  assert {
+    condition     = output.api_5xx_alarm_arn == null
+    error_message = "API 5xx alarm ARN must be null when operational alarms are disabled."
+  }
+
+  assert {
+    condition     = length(output.operational_alarm_arns) == 0
+    error_message = "Operational alarm ARN list must be empty when alarms are disabled."
+  }
+}
+
+
+run "operational_alarm_outputs_enabled" {
+  command = plan
+
+  override_resource {
+    target = aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0]
+
+    values = {
+      arn = "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-lambda-errors"
+    }
+
+    override_during = plan
+  }
+
+  override_resource {
+    target = aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0]
+
+    values = {
+      arn = "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-lambda-throttles"
+    }
+
+    override_during = plan
+  }
+
+  override_resource {
+    target = aws_cloudwatch_metric_alarm.inquiry_api_5xx[0]
+
+    values = {
+      arn = "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-api-5xx"
+    }
+
+    override_during = plan
+  }
+
+  variables {
+    enable_inquiry            = true
+    enable_operational_alarms = true
+    project_name              = "portfolio-test"
+    environment               = "dev"
+    owner                     = "2aron41"
+    allowed_origin            = "https://example.com"
+  }
+
+  assert {
+    condition = (
+      output.lambda_error_alarm_arn
+      == "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-lambda-errors"
+    )
+    error_message = "Lambda error alarm ARN output is incorrect."
+  }
+
+  assert {
+    condition = (
+      output.lambda_throttle_alarm_arn
+      == "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-lambda-throttles"
+    )
+    error_message = "Lambda throttle alarm ARN output is incorrect."
+  }
+
+  assert {
+    condition = (
+      output.api_5xx_alarm_arn
+      == "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-api-5xx"
+    )
+    error_message = "API 5xx alarm ARN output is incorrect."
+  }
+
+  assert {
+    condition     = length(output.operational_alarm_arns) == 3
+    error_message = "Exactly three operational alarm ARNs must be exported."
+  }
+
+  assert {
+    condition = contains(
+      output.operational_alarm_arns,
+      "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-lambda-errors",
+    )
+    error_message = "Operational alarm outputs must contain the Lambda error alarm."
+  }
+
+  assert {
+    condition = contains(
+      output.operational_alarm_arns,
+      "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-lambda-throttles",
+    )
+    error_message = "Operational alarm outputs must contain the Lambda throttle alarm."
+  }
+
+  assert {
+    condition = contains(
+      output.operational_alarm_arns,
+      "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-api-5xx",
+    )
+    error_message = "Operational alarm outputs must contain the API 5xx alarm."
+  }
+}
