@@ -18,6 +18,11 @@ if [ ! -f "website/styles.css" ]; then
   exit 1
 fi
 
+if [ ! -f "website/app.js" ]; then
+  echo "ERROR: website/app.js not found."
+  exit 1
+fi
+
 if [ -f "website/index-.html" ]; then
   echo "ERROR: index-.html found. Did you mean index.html?"
   exit 1
@@ -32,5 +37,22 @@ if ! grep -q "styles.css" website/index.html; then
   echo "ERROR: index.html does not appear to reference styles.css."
   exit 1
 fi
+
+if ! grep -q "app.js" website/index.html; then
+  echo "ERROR: index.html does not appear to reference app.js."
+  exit 1
+fi
+
+if ! grep -q 'id="inquiry-form"' website/index.html; then
+  echo "ERROR: inquiry form not found in index.html."
+  exit 1
+fi
+
+if ! command -v node >/dev/null 2>&1; then
+  echo "ERROR: Node.js is required for frontend behavior tests."
+  exit 1
+fi
+
+node tests/test_frontend_inquiry.js
 
 echo "Website validation passed."

@@ -65,6 +65,7 @@ jobs:
           REQUIRED_FILES=(
             "website/index.html"
             "website/styles.css"
+            "website/app.js"
           )
 
           for FILE in "${REQUIRED_FILES[@]}"; do
@@ -79,6 +80,13 @@ jobs:
           echo
           echo "Files prepared for deployment:"
           find website -maxdepth 2 -type f -print | sort
+
+      - name: Test frontend inquiry behavior
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          node tests/test_frontend_inquiry.js
 
       - name: Configure AWS credentials through OIDC
         uses: aws-actions/configure-aws-credentials@v6
@@ -162,6 +170,11 @@ jobs:
             --key styles.css \
             >/dev/null
 
+          aws s3api head-object \
+            --bucket "${S3_BUCKET}" \
+            --key app.js \
+            >/dev/null
+
           echo "PASS: Required objects exist in the deployment bucket."
 
           aws s3api list-objects-v2 \
@@ -220,6 +233,15 @@ jobs:
             "${CLOUDFRONT_URL}/styles.css" \
             --output /tmp/live-styles.css
 
+          curl \
+            --fail \
+            --silent \
+            --show-error \
+            --retry 5 \
+            --retry-delay 5 \
+            "${CLOUDFRONT_URL}/app.js" \
+            --output /tmp/live-app.js
+
           if ! cmp --silent website/index.html /tmp/live-index.html; then
             echo "::error::Live index.html does not match the repository version."
             exit 1
@@ -227,6 +249,11 @@ jobs:
 
           if ! cmp --silent website/styles.css /tmp/live-styles.css; then
             echo "::error::Live styles.css does not match the repository version."
+            exit 1
+          fi
+
+          if ! cmp --silent website/app.js /tmp/live-app.js; then
+            echo "::error::Live app.js does not match the repository version."
             exit 1
           fi
 

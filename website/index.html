@@ -139,6 +139,62 @@
       <h2>Connect</h2>
 
       <p>
+        Have a question about my projects or want to connect? Send me a
+        message through the form below.
+      </p>
+
+      <form id="inquiry-form" class="contact-form">
+        <div class="form-field">
+          <label for="inquiry-name">Name</label>
+          <input
+            id="inquiry-name"
+            name="name"
+            type="text"
+            minlength="2"
+            maxlength="100"
+            autocomplete="name"
+            required
+          >
+        </div>
+
+        <div class="form-field">
+          <label for="inquiry-email">Email</label>
+          <input
+            id="inquiry-email"
+            name="email"
+            type="email"
+            minlength="3"
+            maxlength="254"
+            autocomplete="email"
+            required
+          >
+        </div>
+
+        <div class="form-field">
+          <label for="inquiry-message">Message</label>
+          <textarea
+            id="inquiry-message"
+            name="message"
+            minlength="10"
+            maxlength="2000"
+            rows="6"
+            required
+          ></textarea>
+        </div>
+
+        <button id="inquiry-submit" class="button" type="submit">
+          Send message
+        </button>
+
+        <p
+          id="inquiry-status"
+          class="form-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+      </form>
+
+      <p class="connect-links">
         <a
           href="https://github.com/2aron41"
           target="_blank"
@@ -161,5 +217,6 @@
   <footer>
     <p>Built by Aaron as part of the Cloud + AI Engineering Roadmap.</p>
   </footer>
+  <script src="app.js" defer></script>
 </body>
 </html>
