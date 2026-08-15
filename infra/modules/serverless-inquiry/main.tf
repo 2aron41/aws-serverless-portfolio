@@ -131,7 +131,7 @@ resource "aws_lambda_function" "inquiry" {
   memory_size = 128
   timeout     = 5
 
-  reserved_concurrent_executions = 2
+  reserved_concurrent_executions = -1
 
   environment {
     variables = {

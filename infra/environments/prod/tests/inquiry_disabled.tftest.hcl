@@ -16,26 +16,30 @@ mock_provider "aws" {
   }
 }
 
-run "inquiry_disabled_by_default" {
+run "inquiry_can_be_explicitly_disabled" {
   command = plan
+
+  variables {
+    enable_inquiry = false
+  }
 
   assert {
     condition     = output.inquiry_enabled == false
-    error_message = "Production inquiry must remain disabled by default."
+    error_message = "Production inquiry must report disabled when explicitly disabled."
   }
 
   assert {
     condition     = output.inquiry_api_endpoint == null
-    error_message = "Disabled production inquiry must not expose an API endpoint."
+    error_message = "Explicitly disabled production inquiry must not expose an API endpoint."
   }
 
   assert {
     condition     = output.inquiry_lambda_function_name == null
-    error_message = "Disabled production inquiry must not expose a Lambda function."
+    error_message = "Explicitly disabled production inquiry must not expose a Lambda function."
   }
 
   assert {
     condition     = output.inquiry_sns_topic_arn == null
-    error_message = "Disabled production inquiry must not expose an SNS topic."
+    error_message = "Explicitly disabled production inquiry must not expose an SNS topic."
   }
 }

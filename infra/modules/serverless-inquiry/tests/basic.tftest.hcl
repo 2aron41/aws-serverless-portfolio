@@ -376,9 +376,9 @@ run "lambda_configuration_when_enabled" {
   assert {
     condition = (
       aws_lambda_function.inquiry[0].reserved_concurrent_executions
-      == 2
+      == -1
     )
-    error_message = "Lambda reserved concurrency must be 2."
+    error_message = "Lambda must use unreserved concurrency."
   }
 
   assert {
