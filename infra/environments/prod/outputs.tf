@@ -49,3 +49,25 @@ output "inquiry_sns_topic_arn" {
   description = "Production inquiry SNS topic ARN when enabled."
   value       = module.serverless_inquiry.sns_topic_arn
 }
+
+
+output "inquiry_operational_alarms_enabled" {
+  description = "Whether production inquiry operational alarms are enabled."
+  value       = var.enable_inquiry && var.enable_inquiry_operational_alarms
+}
+
+
+output "inquiry_operational_alarm_topic_arn" {
+  description = "SNS topic ARN used by production inquiry operational alarms."
+  value = (
+    var.enable_inquiry && var.enable_inquiry_operational_alarms
+    ? aws_sns_topic.inquiry_operations[0].arn
+    : null
+  )
+}
+
+
+output "inquiry_operational_alarm_arns" {
+  description = "Production inquiry operational CloudWatch alarm ARNs."
+  value       = module.serverless_inquiry.operational_alarm_arns
+}

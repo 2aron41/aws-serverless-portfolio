@@ -53,3 +53,7 @@ inquiry_log_retention_days = 14
 
 # The allowed browser origin is derived from the production CloudFront
 # distribution in main.tf; do not duplicate it here.
+
+# Production inquiry operational monitoring.
+# Keep disabled until the production Terraform plan is reviewed.
+enable_inquiry_operational_alarms = false

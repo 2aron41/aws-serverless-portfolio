@@ -20,7 +20,8 @@ run "inquiry_can_be_explicitly_disabled" {
   command = plan
 
   variables {
-    enable_inquiry = false
+    enable_inquiry                    = false
+    enable_inquiry_operational_alarms = false
   }
 
   assert {
@@ -41,5 +42,21 @@ run "inquiry_can_be_explicitly_disabled" {
   assert {
     condition     = output.inquiry_sns_topic_arn == null
     error_message = "Explicitly disabled production inquiry must not expose an SNS topic."
+  }
+
+
+  assert {
+    condition     = output.inquiry_operational_alarms_enabled == false
+    error_message = "Operational alarms must remain disabled when the production inquiry is disabled."
+  }
+
+  assert {
+    condition     = output.inquiry_operational_alarm_topic_arn == null
+    error_message = "Disabled production monitoring must not expose an operations SNS topic."
+  }
+
+  assert {
+    condition     = length(output.inquiry_operational_alarm_arns) == 0
+    error_message = "Disabled production monitoring must expose no inquiry operational alarm ARNs."
   }
 }

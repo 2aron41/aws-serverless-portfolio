@@ -192,3 +192,10 @@ variable "inquiry_log_retention_days" {
     error_message = "Inquiry log retention must be 7, 14, 30, 60, or 90 days."
   }
 }
+
+
+variable "enable_inquiry_operational_alarms" {
+  description = "Whether to create production operational alarms and the dedicated inquiry operations SNS topic."
+  type        = bool
+  default     = false
+}
