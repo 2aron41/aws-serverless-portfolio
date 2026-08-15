@@ -29,3 +29,23 @@ output "cloudfront_oac_id" {
   description = "ID of the production CloudFront Origin Access Control."
   value       = module.static_site.origin_access_control_id
 }
+
+output "inquiry_enabled" {
+  description = "Whether the production serverless inquiry workload is enabled."
+  value       = module.serverless_inquiry.enabled
+}
+
+output "inquiry_api_endpoint" {
+  description = "Production inquiry POST endpoint when enabled."
+  value       = module.serverless_inquiry.api_endpoint
+}
+
+output "inquiry_lambda_function_name" {
+  description = "Production inquiry Lambda function name when enabled."
+  value       = module.serverless_inquiry.lambda_function_name
+}
+
+output "inquiry_sns_topic_arn" {
+  description = "Production inquiry SNS topic ARN when enabled."
+  value       = module.serverless_inquiry.sns_topic_arn
+}

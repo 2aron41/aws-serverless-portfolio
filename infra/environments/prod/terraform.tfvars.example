@@ -45,3 +45,11 @@ cloudfront_policy_source_arn = "arn:aws:cloudfront::123456789012:distribution/RE
 cloudfront_source_arn_condition_test = "ArnLike"
 
 purpose = "Production portfolio website"
+
+# Serverless portfolio inquiry workload.
+# Keep disabled until a production Terraform plan has been reviewed.
+enable_inquiry             = false
+inquiry_log_retention_days = 14
+
+# The allowed browser origin is derived from the production CloudFront
+# distribution in main.tf; do not duplicate it here.

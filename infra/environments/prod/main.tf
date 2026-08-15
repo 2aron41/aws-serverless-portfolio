@@ -53,3 +53,23 @@ module "static_site" {
 
   tags = local.workload_tags
 }
+
+module "serverless_inquiry" {
+  source = "../../modules/serverless-inquiry"
+
+  enable_inquiry = var.enable_inquiry
+  project_name   = var.project_name
+  environment    = var.environment
+  owner          = var.github_username
+
+  log_retention_days = var.inquiry_log_retention_days
+
+  # The current production portfolio is served directly from CloudFront.
+  # Derive the browser origin from the managed distribution rather than
+  # maintaining a second copy of the production domain.
+  allowed_origin = (
+    var.enable_inquiry && var.enable_cloudfront
+    ? "https://${module.static_site.cloudfront_domain_name}"
+    : ""
+  )
+}

@@ -172,3 +172,23 @@ variable "purpose" {
   type        = string
   default     = "Production portfolio website"
 }
+
+variable "enable_inquiry" {
+  description = "Whether the production serverless portfolio inquiry workload should be created."
+  type        = bool
+  default     = false
+}
+
+variable "inquiry_log_retention_days" {
+  description = "CloudWatch Logs retention period for production inquiry Lambda and API access logs."
+  type        = number
+  default     = 14
+
+  validation {
+    condition = contains(
+      [7, 14, 30, 60, 90],
+      var.inquiry_log_retention_days,
+    )
+    error_message = "Inquiry log retention must be 7, 14, 30, 60, or 90 days."
+  }
+}
