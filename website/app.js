@@ -7,6 +7,9 @@ const inquiryForm = document.querySelector("#inquiry-form");
 const submitButton = document.querySelector("#inquiry-submit");
 const statusMessage = document.querySelector("#inquiry-status");
 
+const SUBMISSION_COOLDOWN_MS = 30_000;
+let lastSuccessfulSubmissionAt = null;
+
 async function submitInquiry(event) {
   event.preventDefault();
 
@@ -33,6 +36,15 @@ async function submitInquiry(event) {
     return;
   }
 
+  if (
+    lastSuccessfulSubmissionAt !== null &&
+    Date.now() - lastSuccessfulSubmissionAt < SUBMISSION_COOLDOWN_MS
+  ) {
+    statusMessage.textContent =
+      "Please wait before sending another message.";
+    return;
+  }
+
   submitButton.disabled = true;
   statusMessage.textContent = "Sending message...";
 
@@ -50,6 +62,7 @@ async function submitInquiry(event) {
     }
 
     inquiryForm.reset();
+    lastSuccessfulSubmissionAt = Date.now();
 
     statusMessage.textContent =
       "Message sent successfully. Thank you for reaching out.";

@@ -27,6 +27,7 @@ function deferred() {
 
 function createHarness({
   valid = true,
+  now = 1_000_000,
   values = {
     name: "Day 37 Tester",
     email: "day37@example.com",
@@ -40,6 +41,7 @@ function createHarness({
   let reportValidityCalls = 0;
   let resetCalls = 0;
   const fetchCalls = [];
+  let currentTime = now;
 
   const form = {
     checkValidity() {
@@ -103,10 +105,17 @@ function createHarness({
     },
   };
 
+  const MockDate = {
+    now() {
+      return currentTime;
+    },
+  };
+
   const context = vm.createContext({
     document,
     FormData: MockFormData,
     fetch: mockFetch,
+    Date: MockDate,
     Error,
     JSON,
   });
@@ -154,6 +163,10 @@ function createHarness({
     },
     get resetCalls() {
       return resetCalls;
+    },
+
+    advanceTime(milliseconds) {
+      currentTime += milliseconds;
     },
   };
 }
@@ -267,6 +280,105 @@ async function testSuccessfulSubmission() {
   );
 }
 
+async function testImmediateDuplicateSubmissionIsBlocked() {
+  const harness = createHarness();
+
+  await harness.submit();
+
+  assert.equal(
+    harness.fetchCalls.length,
+    1,
+    "First valid submission should call the API once.",
+  );
+
+  assert.equal(
+    harness.resetCalls,
+    1,
+    "First successful submission should reset the form.",
+  );
+
+  await harness.submit();
+
+  assert.equal(
+    harness.fetchCalls.length,
+    1,
+    "Immediate duplicate submission must not call the API again.",
+  );
+
+  assert.equal(
+    harness.status.textContent,
+    "Please wait before sending another message.",
+  );
+}
+
+async function testSubmissionAllowedAfterCooldownExpires() {
+  const harness = createHarness();
+
+  await harness.submit();
+
+  assert.equal(
+    harness.fetchCalls.length,
+    1,
+    "Initial submission should reach the API.",
+  );
+
+  harness.advanceTime(30_000);
+
+  await harness.submit();
+
+  assert.equal(
+    harness.fetchCalls.length,
+    2,
+    "Submission should be allowed after the cooldown expires.",
+  );
+
+  assert.equal(
+    harness.resetCalls,
+    2,
+    "Both successful submissions should reset the form.",
+  );
+}
+
+async function testFailedSubmissionDoesNotStartCooldown() {
+  let attempt = 0;
+
+  const harness = createHarness({
+    fetchImpl: async () => {
+      attempt += 1;
+
+      return {
+        ok: attempt > 1,
+      };
+    },
+  });
+
+  await harness.submit();
+
+  assert.equal(
+    harness.fetchCalls.length,
+    1,
+    "First request should reach the API.",
+  );
+
+  assert.equal(
+    harness.status.textContent,
+    "Your message could not be sent. Please try again later.",
+  );
+
+  await harness.submit();
+
+  assert.equal(
+    harness.fetchCalls.length,
+    2,
+    "Failed submission must not start the cooldown.",
+  );
+
+  assert.equal(
+    harness.status.textContent,
+    "Message sent successfully. Thank you for reaching out.",
+  );
+}
+
 async function testHttpFailureShowsGenericError() {
   const harness = createHarness({
     fetchImpl: async () => ({
@@ -318,6 +430,18 @@ async function main() {
     [
       "successful submission trims payload and resets form",
       testSuccessfulSubmission,
+    ],
+    [
+      "immediate duplicate submission is blocked",
+      testImmediateDuplicateSubmissionIsBlocked,
+    ],
+    [
+      "submission is allowed after cooldown expires",
+      testSubmissionAllowedAfterCooldownExpires,
+    ],
+    [
+      "failed submission does not start cooldown",
+      testFailedSubmissionDoesNotStartCooldown,
     ],
     [
       "HTTP failure returns generic UI error",
