@@ -199,3 +199,28 @@ variable "enable_inquiry_operational_alarms" {
   type        = bool
   default     = false
 }
+
+variable "inquiry_api_throttling_burst_limit" {
+  description = "Maximum burst of requests allowed by the production inquiry HTTP API."
+  type        = number
+  default     = 2
+
+  validation {
+    condition = (
+      var.inquiry_api_throttling_burst_limit >= 1 &&
+      floor(var.inquiry_api_throttling_burst_limit) == var.inquiry_api_throttling_burst_limit
+    )
+    error_message = "inquiry_api_throttling_burst_limit must be a positive whole number."
+  }
+}
+
+variable "inquiry_api_throttling_rate_limit" {
+  description = "Steady-state requests per second allowed by the production inquiry HTTP API."
+  type        = number
+  default     = 1
+
+  validation {
+    condition     = var.inquiry_api_throttling_rate_limit > 0
+    error_message = "inquiry_api_throttling_rate_limit must be greater than zero."
+  }
+}

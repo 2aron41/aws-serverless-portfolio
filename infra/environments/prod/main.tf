@@ -64,6 +64,9 @@ module "serverless_inquiry" {
 
   log_retention_days = var.inquiry_log_retention_days
 
+  api_throttling_burst_limit = var.inquiry_api_throttling_burst_limit
+  api_throttling_rate_limit  = var.inquiry_api_throttling_rate_limit
+
   enable_operational_alarms = var.enable_inquiry_operational_alarms
 
   operational_alarm_topic_arn = (
