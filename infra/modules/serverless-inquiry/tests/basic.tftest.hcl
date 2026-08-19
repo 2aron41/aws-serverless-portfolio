@@ -805,6 +805,11 @@ run "inquiry_operational_alarms_disabled_by_default" {
     condition     = length(aws_cloudwatch_metric_alarm.inquiry_api_5xx) == 0
     error_message = "API 5xx alarm must remain disabled by default."
   }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_api_4xx) == 0
+    error_message = "API 4xx alarm must remain disabled by default."
+  }
 }
 
 
@@ -844,6 +849,11 @@ run "inquiry_operational_alarms_enabled_without_notifications" {
   assert {
     condition     = length(aws_cloudwatch_metric_alarm.inquiry_api_5xx) == 1
     error_message = "Exactly one API 5xx alarm must be created."
+  }
+
+  assert {
+    condition     = length(aws_cloudwatch_metric_alarm.inquiry_api_4xx) == 1
+    error_message = "Exactly one API 4xx alarm must be created."
   }
 
   assert {
@@ -1143,6 +1153,23 @@ run "inquiry_operational_alarms_enabled_with_notifications" {
     )
     error_message = "API 5xx OK action must target the operational topic."
   }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].alarm_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "API 4xx ALARM action must target the operational topic."
+  }
+
+  assert {
+    condition = contains(
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].ok_actions,
+      "arn:aws:sns:us-east-1:123456789012:portfolio-operations",
+    )
+    error_message = "API 4xx OK action must target the operational topic."
+  }
+
 }
 
 
@@ -1189,6 +1216,12 @@ run "operational_alarm_outputs_disabled" {
     condition     = length(output.operational_alarm_arns) == 0
     error_message = "Operational alarm ARN list must be empty when alarms are disabled."
   }
+
+  assert {
+    condition     = output.api_4xx_alarm_arn == null
+    error_message = "API 4xx alarm ARN output must be null when operational alarms are disabled."
+  }
+
 }
 
 
@@ -1220,6 +1253,17 @@ run "operational_alarm_outputs_enabled" {
 
     values = {
       arn = "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-api-5xx"
+    }
+
+    override_during = plan
+  }
+
+
+  override_resource {
+    target = aws_cloudwatch_metric_alarm.inquiry_api_4xx[0]
+
+    values = {
+      arn = "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-api-4xx"
     }
 
     override_during = plan
@@ -1259,8 +1303,8 @@ run "operational_alarm_outputs_enabled" {
   }
 
   assert {
-    condition     = length(output.operational_alarm_arns) == 3
-    error_message = "Exactly three operational alarm ARNs must be exported."
+    condition     = length(output.operational_alarm_arns) == 4
+    error_message = "Exactly four operational alarm ARNs must be exported."
   }
 
   assert {
@@ -1286,6 +1330,23 @@ run "operational_alarm_outputs_enabled" {
     )
     error_message = "Operational alarm outputs must contain the API 5xx alarm."
   }
+
+  assert {
+    condition = (
+      output.api_4xx_alarm_arn
+      == "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-api-4xx"
+    )
+    error_message = "API 4xx alarm ARN output is incorrect."
+  }
+
+  assert {
+    condition = contains(
+      output.operational_alarm_arns,
+      "arn:aws:cloudwatch:us-east-1:123456789012:alarm:portfolio-test-dev-inquiry-api-4xx",
+    )
+    error_message = "Operational alarm outputs must contain the API 4xx alarm."
+  }
+
 }
 
 run "http_api_custom_throttling" {
@@ -1356,4 +1417,153 @@ run "reject_zero_api_throttling_rate_limit" {
   expect_failures = [
     var.api_throttling_rate_limit,
   ]
+}
+
+
+run "inquiry_api_4xx_alarm_detects_sustained_client_errors" {
+  command = plan
+
+  override_resource {
+    target = aws_apigatewayv2_api.inquiry[0]
+
+    values = {
+      id            = "mock-inquiry-api-id"
+      execution_arn = "arn:aws:execute-api:us-east-1:123456789012:mock-inquiry-api-id"
+    }
+
+    override_during = plan
+  }
+
+  variables {
+    enable_inquiry            = true
+    enable_operational_alarms = true
+    project_name              = "portfolio-test"
+    environment               = "dev"
+    owner                     = "2aron41"
+    allowed_origin            = "https://example.com"
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].alarm_name
+      == "portfolio-test-dev-inquiry-api-4xx"
+    )
+    error_message = "API 4xx alarm name is incorrect."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].namespace
+      == "AWS/ApiGateway"
+    )
+    error_message = "API 4xx alarm must use AWS/ApiGateway."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].metric_name
+      == "4xx"
+    )
+    error_message = "API 4xx alarm must monitor 4xx."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].statistic
+      == "Sum"
+    )
+    error_message = "API 4xx alarm must use Sum."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].period
+      == 300
+    )
+    error_message = "API 4xx alarm must use a five-minute period."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].threshold
+      == 20
+    )
+    error_message = "API 4xx alarm default threshold must be 20."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].evaluation_periods
+      == 2
+    )
+    error_message = "API 4xx alarm must evaluate two periods."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].datapoints_to_alarm
+      == 2
+    )
+    error_message = "API 4xx alarm must require two breaching datapoints."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0]
+      .comparison_operator
+      == "GreaterThanOrEqualToThreshold"
+    )
+    error_message = "API 4xx alarm comparison operator is incorrect."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].treat_missing_data
+      == "notBreaching"
+    )
+    error_message = "API 4xx alarm must treat missing data as not breaching."
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0]
+      .dimensions["ApiId"]
+      == "mock-inquiry-api-id"
+    )
+    error_message = "API 4xx alarm must target the inquiry HTTP API."
+  }
+}
+
+
+run "inquiry_api_4xx_alarm_threshold_is_configurable" {
+  command = plan
+
+  override_resource {
+    target = aws_apigatewayv2_api.inquiry[0]
+
+    values = {
+      id            = "mock-inquiry-api-id"
+      execution_arn = "arn:aws:execute-api:us-east-1:123456789012:mock-inquiry-api-id"
+    }
+
+    override_during = plan
+  }
+
+  variables {
+    enable_inquiry            = true
+    enable_operational_alarms = true
+    api_4xx_alarm_threshold   = 30
+    project_name              = "portfolio-test"
+    environment               = "dev"
+    owner                     = "2aron41"
+    allowed_origin            = "https://example.com"
+  }
+
+  assert {
+    condition = (
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].threshold
+      == 30
+    )
+    error_message = "API 4xx alarm must honor the configured threshold."
+  }
 }

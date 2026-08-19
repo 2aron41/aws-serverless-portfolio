@@ -116,3 +116,18 @@ variable "api_throttling_rate_limit" {
     error_message = "api_throttling_rate_limit must be greater than zero."
   }
 }
+
+
+variable "api_4xx_alarm_threshold" {
+  description = "Number of API Gateway 4xx responses in a five-minute period considered abnormal."
+  type        = number
+  default     = 20
+
+  validation {
+    condition = (
+      var.api_4xx_alarm_threshold >= 1 &&
+      floor(var.api_4xx_alarm_threshold) == var.api_4xx_alarm_threshold
+    )
+    error_message = "api_4xx_alarm_threshold must be a positive whole number."
+  }
+}

@@ -69,7 +69,18 @@ output "operational_alarm_arns" {
       aws_cloudwatch_metric_alarm.inquiry_lambda_errors[0].arn,
       aws_cloudwatch_metric_alarm.inquiry_lambda_throttles[0].arn,
       aws_cloudwatch_metric_alarm.inquiry_api_5xx[0].arn,
+      aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].arn,
     ]
     : []
+  )
+}
+
+
+output "api_4xx_alarm_arn" {
+  description = "ARN of the inquiry API Gateway 4xx alarm when operational alarms are enabled."
+  value = (
+    var.enable_inquiry && var.enable_operational_alarms
+    ? aws_cloudwatch_metric_alarm.inquiry_api_4xx[0].arn
+    : null
   )
 }

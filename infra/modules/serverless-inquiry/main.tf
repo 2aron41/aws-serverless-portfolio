@@ -345,3 +345,37 @@ resource "aws_cloudwatch_metric_alarm" "inquiry_api_5xx" {
 
   tags = local.common_tags
 }
+
+
+resource "aws_cloudwatch_metric_alarm" "inquiry_api_4xx" {
+  count = var.enable_inquiry && var.enable_operational_alarms ? 1 : 0
+
+  alarm_name        = "${var.project_name}-${var.environment}-inquiry-api-4xx"
+  alarm_description = "Inquiry API Gateway reported sustained abnormal client-error traffic."
+
+  namespace   = "AWS/ApiGateway"
+  metric_name = "4xx"
+  statistic   = "Sum"
+  period      = 300
+
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  threshold           = var.api_4xx_alarm_threshold
+  evaluation_periods  = 2
+  datapoints_to_alarm = 2
+
+  treat_missing_data = "notBreaching"
+
+  alarm_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  ok_actions = var.operational_alarm_topic_arn != null ? [
+    var.operational_alarm_topic_arn,
+  ] : []
+
+  dimensions = {
+    ApiId = aws_apigatewayv2_api.inquiry[0].id
+  }
+
+  tags = local.common_tags
+}
