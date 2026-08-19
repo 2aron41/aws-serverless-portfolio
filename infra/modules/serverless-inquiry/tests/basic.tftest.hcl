@@ -1287,3 +1287,73 @@ run "operational_alarm_outputs_enabled" {
     error_message = "Operational alarm outputs must contain the API 5xx alarm."
   }
 }
+
+run "http_api_custom_throttling" {
+  command = plan
+
+  variables {
+    enable_inquiry             = true
+    allowed_origin             = "https://portfolio.example"
+    project_name               = "portfolio-test"
+    environment                = "dev"
+    owner                      = "2aron41"
+    api_throttling_burst_limit = 1
+    api_throttling_rate_limit  = 0.5
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_stage.inquiry[0]
+      .default_route_settings[0]
+      .throttling_burst_limit
+      == 1
+    )
+    error_message = "HTTP API must honor the configured burst throttle."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_stage.inquiry[0]
+      .default_route_settings[0]
+      .throttling_rate_limit
+      == 0.5
+    )
+    error_message = "HTTP API must honor the configured rate throttle."
+  }
+}
+
+run "reject_zero_api_throttling_burst_limit" {
+  command = plan
+
+  variables {
+    api_throttling_burst_limit = 0
+  }
+
+  expect_failures = [
+    var.api_throttling_burst_limit,
+  ]
+}
+
+run "reject_fractional_api_throttling_burst_limit" {
+  command = plan
+
+  variables {
+    api_throttling_burst_limit = 1.5
+  }
+
+  expect_failures = [
+    var.api_throttling_burst_limit,
+  ]
+}
+
+run "reject_zero_api_throttling_rate_limit" {
+  command = plan
+
+  variables {
+    api_throttling_rate_limit = 0
+  }
+
+  expect_failures = [
+    var.api_throttling_rate_limit,
+  ]
+}
