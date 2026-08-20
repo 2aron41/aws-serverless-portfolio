@@ -18,6 +18,7 @@ Operational alarms:
 - `aws-serverless-portfolio-prod-inquiry-lambda-errors`
 - `aws-serverless-portfolio-prod-inquiry-lambda-throttles`
 - `aws-serverless-portfolio-prod-inquiry-api-5xx`
+- `aws-serverless-portfolio-prod-inquiry-api-4xx`
 
 ## First Response
 
@@ -135,6 +136,63 @@ Investigate:
 
 Also verify Lambda health.
 
+## API Gateway 4xx Alarm
+
+Alarm:
+
+`aws-serverless-portfolio-prod-inquiry-api-4xx`
+
+Purpose:
+
+Detect sustained abnormal client-error traffic against the production
+inquiry API.
+
+Current configuration:
+
+- Metric: `AWS/ApiGateway 4xx`
+- Statistic: `Sum`
+- Threshold: `20`
+- Period: `300` seconds
+- Evaluation periods: `2`
+- Datapoints to alarm: `2`
+- Missing data: `notBreaching`
+
+The alarm requires the threshold to be met for two consecutive five-minute
+evaluation periods. An isolated client mistake should therefore not be
+treated as equivalent to a sustained abnormal request pattern.
+
+Review API access logs:
+
+    aws logs tail \
+      /aws/apigateway/aws-serverless-portfolio-prod-inquiry-access \
+      --region us-east-1 \
+      --since 30m
+
+Investigate:
+
+- malformed or invalid requests
+- unexpected request bursts
+- repeated abusive request patterns
+- broken or misconfigured clients
+- unexpected frontend behavior
+- changes in request origin or request pattern
+
+Also compare the 4xx alarm with:
+
+- API Gateway 5xx
+- Lambda Errors
+- Lambda Throttles
+
+A 4xx alarm without corresponding 5xx or Lambda failures points first toward
+client-side behavior, malformed traffic, or abuse rather than an immediate
+server failure.
+
+Do not weaken validation, disable throttling, or increase limits solely to
+clear the alarm.
+
+Do not generate additional production traffic unless it is necessary for a
+bounded diagnostic test.
+
 ## Verify User-Facing Service
 
 Check CloudFront:
@@ -165,6 +223,17 @@ Interpretation:
 - exit code 2: proposed changes exist
 
 Never apply an unreviewed production plan.
+
+Incident-response stop conditions:
+
+- stop if the proposed Terraform plan contains unexpected destruction
+- stop if the proposed Terraform plan contains unexpected replacement
+- stop if the AWS account or production environment cannot be verified
+- stop if repository state differs from the reviewed implementation
+- stop if the saved plan differs from the reviewed plan artifact
+- do not disable monitoring merely to silence an active incident
+- do not make the portfolio S3 bucket public as a recovery shortcut
+- do not use `terraform destroy` as an incident recovery procedure
 
 Production change process:
 
@@ -222,13 +291,14 @@ Do not use manual alarm-state changes to conceal or clear a real incident.
 
 ## Healthy Baseline
 
-Expected production baseline after Day 38:
+Expected production baseline after Day 42:
 
 - Lambda Errors alarm: `OK`
 - Lambda Throttles alarm: `OK`
 - API Gateway 5xx alarm: `OK`
+- API Gateway 4xx alarm: `OK`
 - Lambda State: `Active`
 - Lambda LastUpdateStatus: `Successful`
-- Terraform state objects: 29
+- Terraform state objects: 30
 - Terraform convergence: `No changes`
 - operations SNS subscribers: 1 confirmed
