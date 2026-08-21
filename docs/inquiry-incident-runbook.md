@@ -249,13 +249,183 @@ Production change process:
 10. verify live resources
 11. run a convergence plan
 
-## Recovery
+## Recovery Decision Procedure
 
-For a real incident, do not manually force an alarm to `OK`.
+Choose the recovery method based on the failure domain. Do not begin by
+changing infrastructure.
 
-The alarm should recover when CloudWatch evaluates the underlying metric as healthy.
+### 1. Establish the incident baseline
 
-After recovery:
+Before recovery:
+
+1. verify the AWS account and production environment
+2. record the current Git commit
+3. confirm repository status
+4. inspect current alarm states and alarm history
+5. inspect relevant API Gateway and Lambda logs
+6. inspect Terraform state
+7. run a read-only production Terraform plan
+8. identify the last known-good application and infrastructure state
+
+Do not attempt recovery until the failure domain is understood well enough to
+choose a bounded recovery method.
+
+### 2. Application or Lambda code regression
+
+The production inquiry Lambda currently uses `$LATEST`.
+
+Terraform currently has:
+
+- `publish = false`
+- no published Lambda versions
+- no Lambda aliases
+
+Therefore an instant alias-based rollback is not currently available.
+
+For a confirmed application-code regression:
+
+1. identify the last known-good Git commit
+2. inspect the code difference
+3. restore or revert only the required application change
+4. run relevant local tests
+5. commit the recovery change
+6. push and verify CI
+7. create a fresh production saved Terraform plan
+8. inspect the exact Lambda mutation
+9. stop if unrelated resources change
+10. stop if destruction or unexpected replacement appears
+11. record the saved-plan checksum
+12. apply only the exact reviewed saved plan
+13. verify Lambda state and update status
+14. verify API behavior with the minimum necessary validation
+15. verify operational alarms
+16. verify Terraform convergence
+
+Do not use a manual AWS Lambda code update outside Terraform as the normal
+rollback path because that would create drift from the reviewed desired state.
+
+### 3. Terraform configuration regression
+
+For a confirmed Terraform configuration regression:
+
+1. identify the last known-good configuration
+2. restore or revert only the defective desired-state change
+3. run formatting, validation, and relevant module tests
+4. commit and push the recovery change
+5. verify CI
+6. create a fresh saved production plan
+7. inspect every planned mutation
+8. stop on unexpected additions, replacements, or destruction
+9. apply only the exact reviewed saved plan
+10. verify live AWS resources
+11. run a convergence plan
+
+Never assume that reverting Git alone changes production. Production changes
+only when the reviewed desired state is applied.
+
+### 4. Partial Terraform apply
+
+A partial apply must be investigated before any second apply.
+
+For a partial apply:
+
+1. inspect Terraform state
+2. inspect the live AWS resources
+3. determine exactly which operations completed
+4. determine exactly which operation failed
+5. correct the desired-state cause
+6. run tests
+7. inspect any tainted resources before changing taint state
+8. remove taint only when the existing live resource has been independently
+   verified as healthy and preserving it is intentional
+9. create a fresh recovery plan
+10. verify the plan represents only the remaining intended work
+11. stop on unexpected replacement or destruction
+12. apply only the reviewed recovery plan
+13. verify final Terraform convergence
+
+Do not blindly rerun the original failed apply.
+
+### 5. Terraform state recovery
+
+The authoritative production Terraform backend is the versioned S3 backend.
+
+State recovery is different from infrastructure recovery.
+
+Use backend state recovery only when the Terraform state itself is confirmed
+to be damaged, lost, or incorrect.
+
+Before restoring any prior state version:
+
+1. stop normal Terraform changes
+2. verify the AWS account
+3. preserve the current state object and version information
+4. inspect the versioned S3 state history
+5. identify the exact known-good state version
+6. compare the proposed state version with live AWS resources
+7. document why state restoration is necessary
+8. review the restoration procedure separately
+
+Do not restore an older state version merely because an infrastructure change
+was undesirable.
+
+Do not manually edit production Terraform state as an ad hoc recovery method.
+
+### 6. API Gateway configuration recovery
+
+The production HTTP API uses the `$default` stage with automatic deployment.
+
+There is no separately managed manual promotion step in the current
+architecture.
+
+Recover API Gateway configuration through the reviewed Terraform desired
+state rather than attempting to treat a prior API deployment identifier as
+the primary rollback mechanism.
+
+### 7. Monitoring and alarm recovery
+
+Do not manually force a real operational alarm back to `OK`.
+
+Correct the underlying failure or traffic condition and allow CloudWatch to
+reevaluate the real metric.
+
+After the metric is healthy:
+
+1. confirm the alarm returns to `OK`
+2. review the state-transition reason
+3. confirm the recovery notification
+4. verify related alarms
+5. document the incident timeline
+
+### Recovery stop conditions
+
+Stop the recovery workflow if:
+
+- the AWS account or environment cannot be verified
+- the failure domain is still unknown
+- the repository contains unrelated changes
+- Terraform state does not match the expected environment
+- the plan contains unexplained additions
+- the plan contains unexpected replacement
+- the plan contains unexpected destruction
+- the plan differs from the reviewed saved-plan artifact
+- the proposed action would weaken validation, throttling, IAM, monitoring,
+  S3 privacy, or another production safety control
+- the proposed recovery depends on manually hiding or clearing a real alarm
+
+Do not use `terraform destroy` as a rollback procedure.
+
+Do not make the production S3 bucket public as a recovery shortcut.
+
+## Post-Recovery Verification
+
+After the chosen recovery action, verify that the underlying production
+condition is actually healthy.
+
+Do not manually force a real alarm to `OK`. CloudWatch should return the
+alarm to `OK` only when evaluation of the underlying metric shows recovery.
+
+Verify:
 
 1. confirm alarm state is `OK`
 2. confirm service health
