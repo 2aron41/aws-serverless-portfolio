@@ -179,6 +179,27 @@ variable "enable_inquiry" {
   default     = false
 }
 
+variable "enable_inquiry_lambda_alias" {
+  description = "Whether production publishes numbered inquiry Lambda versions and creates the live recovery alias."
+  type        = bool
+  default     = false
+}
+
+variable "inquiry_lambda_alias_version" {
+  description = "Optional numbered production inquiry Lambda version to pin the live alias to during a reviewed rollback."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.inquiry_lambda_alias_version == null ||
+      can(regex("^[1-9][0-9]*$", var.inquiry_lambda_alias_version))
+    )
+    error_message = "inquiry_lambda_alias_version must be null or a positive numbered Lambda version."
+  }
+}
+
 variable "inquiry_log_retention_days" {
   description = "CloudWatch Logs retention period for production inquiry Lambda and API access logs."
   type        = number

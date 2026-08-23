@@ -49,6 +49,8 @@ purpose = "Production portfolio website"
 # Serverless portfolio inquiry workload.
 # Keep disabled until a production Terraform plan has been reviewed.
 enable_inquiry             = false
+enable_inquiry_lambda_alias = false
+inquiry_lambda_alias_version = null
 inquiry_log_retention_days = 14
 
 # The allowed browser origin is derived from the production CloudFront

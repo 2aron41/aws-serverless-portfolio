@@ -58,9 +58,13 @@ module "serverless_inquiry" {
   source = "../../modules/serverless-inquiry"
 
   enable_inquiry = var.enable_inquiry
-  project_name   = var.project_name
-  environment    = var.environment
-  owner          = var.github_username
+
+  enable_lambda_alias  = var.enable_inquiry_lambda_alias
+  lambda_alias_version = var.inquiry_lambda_alias_version
+
+  project_name = var.project_name
+  environment  = var.environment
+  owner        = var.github_username
 
   log_retention_days = var.inquiry_log_retention_days
 
