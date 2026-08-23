@@ -24,6 +24,7 @@ mock_provider "aws" {
   mock_resource "aws_lambda_function" {
     defaults = {
       invoke_arn = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456789012:function:mock-inquiry/invocations"
+      version    = "1"
     }
   }
 
@@ -1566,4 +1567,236 @@ run "inquiry_api_4xx_alarm_threshold_is_configurable" {
     )
     error_message = "API 4xx alarm must honor the configured threshold."
   }
+}
+
+
+# Day 45 — Lambda version / alias recovery contract.
+#
+# These tests intentionally precede the module implementation.
+# Phase A must create a published Lambda version and a `live` alias while
+# preserving the existing unqualified API Gateway integration.
+
+run "lambda_alias_absent_when_disabled" {
+  command = plan
+
+  assert {
+    condition = (
+      length(aws_lambda_alias.inquiry_live) == 0
+    )
+    error_message = "Lambda live alias must not exist while inquiry is disabled."
+  }
+
+  assert {
+    condition = (
+      length(aws_lambda_permission.inquiry_api_alias) == 0
+    )
+    error_message = "Alias-specific API Gateway permission must not exist while inquiry is disabled."
+  }
+}
+
+run "lambda_version_and_live_alias_when_enabled" {
+  command = plan
+
+  variables {
+    enable_inquiry      = true
+    enable_lambda_alias = true
+    allowed_origin      = "https://portfolio.example"
+    project_name        = "portfolio-test"
+    environment         = "dev"
+    owner               = "2aron41"
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].publish
+      == true
+    )
+    error_message = "Enabling Lambda alias recovery must publish numbered Lambda versions."
+  }
+
+  assert {
+    condition = (
+      length(aws_lambda_alias.inquiry_live) == 1
+    )
+    error_message = "Exactly one live Lambda alias must be created."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_alias.inquiry_live[0].name
+      == "live"
+    )
+    error_message = "Production recovery alias must be named live."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_alias.inquiry_live[0].function_name
+      == aws_lambda_function.inquiry[0].function_name
+    )
+    error_message = "Live alias must target the inquiry Lambda function."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_alias.inquiry_live[0].function_version
+      == aws_lambda_function.inquiry[0].version
+    )
+    error_message = "Without a rollback override, live must follow the freshly published Lambda version."
+  }
+
+  # Phase A safety contract:
+  # API Gateway must continue invoking the existing unqualified Lambda.
+  assert {
+    condition = (
+      aws_apigatewayv2_integration.inquiry[0].integration_uri
+      == aws_lambda_function.inquiry[0].invoke_arn
+    )
+    error_message = "Phase A must not switch API Gateway to the live alias."
+  }
+}
+
+run "lambda_alias_rollback_version_override" {
+  command = plan
+
+  variables {
+    enable_inquiry       = true
+    enable_lambda_alias  = true
+    lambda_alias_version = "7"
+
+    allowed_origin = "https://portfolio.example"
+    project_name   = "portfolio-test"
+    environment    = "dev"
+    owner          = "2aron41"
+  }
+
+  assert {
+    condition = (
+      aws_lambda_alias.inquiry_live[0].function_version
+      == "7"
+    )
+    error_message = "Explicit lambda_alias_version must pin live to the requested numbered version."
+  }
+}
+
+run "lambda_alias_invoke_permission_when_enabled" {
+  command = plan
+
+  variables {
+    enable_inquiry      = true
+    enable_lambda_alias = true
+    allowed_origin      = "https://portfolio.example"
+    project_name        = "portfolio-test"
+    environment         = "dev"
+    owner               = "2aron41"
+  }
+
+  assert {
+    condition = (
+      length(aws_lambda_permission.inquiry_api_alias) == 1
+    )
+    error_message = "Exactly one alias-specific API Gateway invoke permission must exist."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api_alias[0].principal
+      == "apigateway.amazonaws.com"
+    )
+    error_message = "Only API Gateway should receive alias invoke permission."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api_alias[0].action
+      == "lambda:InvokeFunction"
+    )
+    error_message = "Alias permission must allow only Lambda invocation."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api_alias[0].function_name
+      == aws_lambda_function.inquiry[0].function_name
+    )
+    error_message = "Alias permission must target the inquiry Lambda."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api_alias[0].qualifier
+      == aws_lambda_alias.inquiry_live[0].name
+    )
+    error_message = "Alias permission must be scoped specifically to the live alias."
+  }
+
+  assert {
+    condition = (
+      aws_lambda_permission.inquiry_api_alias[0].source_arn
+      == "arn:aws:execute-api:us-east-1:123456789012:mockapi123/$default/POST/inquiries"
+    )
+    error_message = "Alias permission must remain scoped to default-stage POST /inquiries."
+  }
+}
+
+
+run "lambda_alias_default_off_when_inquiry_enabled" {
+  command = plan
+
+  variables {
+    enable_inquiry = true
+    allowed_origin = "https://portfolio.example"
+    project_name   = "portfolio-test"
+    environment    = "dev"
+    owner          = "2aron41"
+  }
+
+  assert {
+    condition = (
+      aws_lambda_function.inquiry[0].publish
+      == false
+    )
+    error_message = "Lambda version publication must remain disabled unless alias recovery is explicitly enabled."
+  }
+
+  assert {
+    condition = (
+      length(aws_lambda_alias.inquiry_live) == 0
+    )
+    error_message = "Live alias must remain absent when alias recovery is not explicitly enabled."
+  }
+
+  assert {
+    condition = (
+      length(aws_lambda_permission.inquiry_api_alias) == 0
+    )
+    error_message = "Alias-specific invoke permission must remain absent when alias recovery is disabled."
+  }
+
+  assert {
+    condition = (
+      aws_apigatewayv2_integration.inquiry[0].integration_uri
+      == aws_lambda_function.inquiry[0].invoke_arn
+    )
+    error_message = "Default configuration must preserve the existing unqualified API Gateway integration."
+  }
+}
+
+run "reject_invalid_lambda_alias_version" {
+  command = plan
+
+  variables {
+    enable_inquiry       = true
+    enable_lambda_alias  = true
+    lambda_alias_version = "0"
+
+    allowed_origin = "https://portfolio.example"
+    project_name   = "portfolio-test"
+    environment    = "dev"
+    owner          = "2aron41"
+  }
+
+  expect_failures = [
+    var.lambda_alias_version,
+  ]
 }

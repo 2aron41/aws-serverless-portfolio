@@ -128,6 +128,8 @@ resource "aws_lambda_function" "inquiry" {
   filename         = data.archive_file.inquiry_lambda[0].output_path
   source_code_hash = data.archive_file.inquiry_lambda[0].output_base64sha256
 
+  publish = var.enable_lambda_alias
+
   memory_size = 128
   timeout     = 5
 
@@ -145,6 +147,26 @@ resource "aws_lambda_function" "inquiry" {
     aws_cloudwatch_log_group.inquiry_lambda,
     aws_iam_role_policy.inquiry_lambda,
   ]
+}
+
+resource "aws_lambda_alias" "inquiry_live" {
+  count = (
+    var.enable_inquiry &&
+    var.enable_lambda_alias
+    ? 1
+    : 0
+  )
+
+  name        = "live"
+  description = "Stable recovery alias for the inquiry Lambda."
+
+  function_name = aws_lambda_function.inquiry[0].function_name
+
+  function_version = (
+    var.lambda_alias_version != null
+    ? var.lambda_alias_version
+    : aws_lambda_function.inquiry[0].version
+  )
 }
 
 resource "aws_apigatewayv2_api" "inquiry" {
@@ -239,6 +261,23 @@ resource "aws_lambda_permission" "inquiry_api" {
   statement_id  = "AllowInquiryApiGatewayInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.inquiry[0].function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_apigatewayv2_api.inquiry[0].execution_arn}/$default/POST/inquiries"
+}
+
+resource "aws_lambda_permission" "inquiry_api_alias" {
+  count = (
+    var.enable_inquiry &&
+    var.enable_lambda_alias
+    ? 1
+    : 0
+  )
+
+  statement_id  = "AllowInquiryApiGatewayInvokeLiveAlias"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.inquiry[0].function_name
+  qualifier     = aws_lambda_alias.inquiry_live[0].name
   principal     = "apigateway.amazonaws.com"
 
   source_arn = "${aws_apigatewayv2_api.inquiry[0].execution_arn}/$default/POST/inquiries"

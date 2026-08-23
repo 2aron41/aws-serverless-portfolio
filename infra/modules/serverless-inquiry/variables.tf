@@ -4,6 +4,27 @@ variable "enable_inquiry" {
   default     = false
 }
 
+variable "enable_lambda_alias" {
+  description = "Whether to publish numbered inquiry Lambda versions and create the live recovery alias."
+  type        = bool
+  default     = false
+}
+
+variable "lambda_alias_version" {
+  description = "Optional numbered Lambda version to pin the live alias to for a reviewed rollback."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition = (
+      var.lambda_alias_version == null ||
+      can(regex("^[1-9][0-9]*$", var.lambda_alias_version))
+    )
+    error_message = "lambda_alias_version must be null or a positive numbered Lambda version."
+  }
+}
+
 variable "project_name" {
   description = "Project name used for inquiry workload naming and tags."
   type        = string
