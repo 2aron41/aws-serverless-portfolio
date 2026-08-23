@@ -208,7 +208,11 @@ resource "aws_apigatewayv2_integration" "inquiry" {
 
   integration_type   = "AWS_PROXY"
   integration_method = "POST"
-  integration_uri    = aws_lambda_function.inquiry[0].invoke_arn
+  integration_uri = (
+    var.enable_lambda_alias
+    ? aws_lambda_alias.inquiry_live[0].invoke_arn
+    : aws_lambda_function.inquiry[0].invoke_arn
+  )
 
   payload_format_version = "2.0"
   timeout_milliseconds   = 5000

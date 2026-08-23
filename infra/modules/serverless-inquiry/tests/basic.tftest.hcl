@@ -1597,6 +1597,15 @@ run "lambda_alias_absent_when_disabled" {
 run "lambda_version_and_live_alias_when_enabled" {
   command = plan
 
+  override_resource {
+    target          = aws_lambda_alias.inquiry_live[0]
+    override_during = plan
+
+    values = {
+      invoke_arn = "arn:aws:apigateway:us-east-1:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-1:123456789012:function:mock-inquiry:live/invocations"
+    }
+  }
+
   variables {
     enable_inquiry      = true
     enable_lambda_alias = true
@@ -1650,9 +1659,9 @@ run "lambda_version_and_live_alias_when_enabled" {
   assert {
     condition = (
       aws_apigatewayv2_integration.inquiry[0].integration_uri
-      == aws_lambda_function.inquiry[0].invoke_arn
+      == aws_lambda_alias.inquiry_live[0].invoke_arn
     )
-    error_message = "Phase A must not switch API Gateway to the live alias."
+    error_message = "When Lambda alias recovery is enabled, API Gateway must route through the live alias invoke ARN."
   }
 }
 
