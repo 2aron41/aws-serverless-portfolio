@@ -20,6 +20,12 @@ run "inquiry_can_be_explicitly_disabled" {
   command = plan
 
   variables {
+    # Required production root inputs are supplied as inert test fixtures so
+    # this test does not depend on the ignored live terraform.tfvars file.
+    bucket_name          = "portfolio-test-prod-bucket"
+    cloudfront_origin_id = "portfolio-test-origin"
+    cloudfront_oac_name  = "portfolio-test-oac"
+
     enable_inquiry                    = false
     enable_inquiry_operational_alarms = false
   }
