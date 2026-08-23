@@ -260,7 +260,12 @@ resource "aws_apigatewayv2_stage" "inquiry" {
 }
 
 resource "aws_lambda_permission" "inquiry_api" {
-  count = var.enable_inquiry ? 1 : 0
+  count = (
+    var.enable_inquiry &&
+    !var.enable_lambda_alias
+    ? 1
+    : 0
+  )
 
   statement_id  = "AllowInquiryApiGatewayInvoke"
   action        = "lambda:InvokeFunction"

@@ -1709,6 +1709,13 @@ run "lambda_alias_invoke_permission_when_enabled" {
 
   assert {
     condition = (
+      length(aws_lambda_permission.inquiry_api) == 0
+    )
+    error_message = "Base API Gateway invoke permission must be absent when traffic is routed through the live alias."
+  }
+
+  assert {
+    condition = (
       aws_lambda_permission.inquiry_api_alias[0].principal
       == "apigateway.amazonaws.com"
     )
@@ -1780,6 +1787,13 @@ run "lambda_alias_default_off_when_inquiry_enabled" {
       length(aws_lambda_permission.inquiry_api_alias) == 0
     )
     error_message = "Alias-specific invoke permission must remain absent when alias recovery is disabled."
+  }
+
+  assert {
+    condition = (
+      length(aws_lambda_permission.inquiry_api) == 1
+    )
+    error_message = "Base API Gateway invoke permission must remain present when alias routing is disabled."
   }
 
   assert {
