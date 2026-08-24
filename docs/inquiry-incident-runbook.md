@@ -272,37 +272,68 @@ choose a bounded recovery method.
 
 ### 2. Application or Lambda code regression
 
-The production inquiry Lambda currently uses `$LATEST`.
+The production inquiry Lambda now uses published numbered versions and a
+Terraform-managed `live` alias.
 
-Terraform currently has:
+The production request path is:
 
-- `publish = false`
-- no published Lambda versions
-- no Lambda aliases
+`API Gateway -> live alias -> numbered Lambda version`
 
-Therefore an instant alias-based rollback is not currently available.
+Terraform currently supports an explicit rollback target through
+`inquiry_lambda_alias_version`.
 
-For a confirmed application-code regression:
+When `inquiry_lambda_alias_version = null`, the `live` alias follows the
+currently published Terraform-managed version.
 
-1. identify the last known-good Git commit
-2. inspect the code difference
-3. restore or revert only the required application change
-4. run relevant local tests
-5. commit the recovery change
-6. push and verify CI
-7. create a fresh production saved Terraform plan
-8. inspect the exact Lambda mutation
-9. stop if unrelated resources change
-10. stop if destruction or unexpected replacement appears
-11. record the saved-plan checksum
-12. apply only the exact reviewed saved plan
-13. verify Lambda state and update status
-14. verify API behavior with the minimum necessary validation
-15. verify operational alarms
-16. verify Terraform convergence
+For a reviewed rollback, `inquiry_lambda_alias_version` can be set to a
+known-good older numbered Lambda version.
+
+Current operational limitation:
+
+- `live` currently targets version `1`
+- version `1` is currently the only numbered Lambda version
+- therefore the rollback mechanism exists, but no older rollback target is
+  currently available
+
+Do not treat `$LATEST` as an immutable rollback version.
+
+For a confirmed application-code regression when a known-good older numbered
+version exists:
+
+1. verify the AWS account and production environment
+2. identify the current `live` alias target
+3. inventory published Lambda versions
+4. identify and verify the known-good rollback version
+5. review the code and configuration associated with that version
+6. set `inquiry_lambda_alias_version` to the reviewed numbered version
+7. run relevant Terraform tests and validation
+8. commit and push the rollback desired-state change
+9. verify CI
+10. create a fresh production saved Terraform plan
+11. confirm the planned mutation is limited to the expected alias target
+12. stop if unrelated resources change
+13. stop if unexpected additions, destruction, or replacement appears
+14. record the production input checksum and saved-plan checksum
+15. apply only the exact reviewed post-CI saved plan
+16. verify `live` points to the intended numbered version
+17. verify API behavior with the minimum necessary validation
+18. verify operational alarms
+19. verify Terraform convergence
+20. document the rollback and resulting production state
+
+If no known-good older numbered Lambda version exists, do not manufacture a
+rollback target or claim that alias rollback was exercised. Use the normal
+reviewed application recovery path instead: restore or revert the required
+application change in source control, test it, pass CI, create and review a
+fresh saved Terraform plan, and apply only that exact reviewed plan.
+
+Do not manually repoint the `live` alias as the normal rollback procedure.
+A manual alias change would create Terraform drift from the reviewed desired
+state.
 
 Do not use a manual AWS Lambda code update outside Terraform as the normal
-rollback path because that would create drift from the reviewed desired state.
+rollback path because that would also create drift from the reviewed desired
+state.
 
 ### 3. Terraform configuration regression
 
