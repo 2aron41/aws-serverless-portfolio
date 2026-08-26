@@ -15,93 +15,115 @@ Deploy a secure static portfolio website using Amazon S3 for storage and Amazon 
 
 ## Step 1: Create S3 Bucket
 
+Notes:
+
 - Create a globally unique bucket name.
 - Use `us-east-1` as the initial project Region.
 - Disable ACLs using Bucket owner enforced.
 - Keep Block Public Access enabled.
 - Use SSE-S3 default encryption.
-- Do not enable public S3 website hosting.
+- Do not enable public S3 website hosting for this architecture.
 
 Status: Completed.
 
 ## Step 2: Upload Static Website Files
 
+Notes:
+
 - Upload `index.html` and `styles.css`.
-- Place both files at the top level of the bucket.
-- Do not upload credentials or private information.
+- Place the files at the top level of the bucket.
+- Confirm that both objects uploaded successfully.
+- Do not upload credentials, access keys, or private information.
 
 Status: Completed.
 
 ## Step 3: Keep S3 Bucket Private
 
-- Keep S3 Block Public Access enabled.
-- Do not use public-read ACLs.
-- Do not allow anonymous uploads, changes, or deletions.
-- Confirm the direct S3 object URL returns Access Denied.
+Notes:
+
+- Keep all S3 Block Public Access settings enabled.
+- Do not add public-read ACLs.
+- Do not grant anonymous users permission to read, upload, overwrite, or delete objects.
+- Verify that opening the direct S3 object URL returns Access Denied.
 
 Status: Completed.
 
 ## Step 4: Create CloudFront Distribution
 
-- Choose the private S3 bucket as the origin.
-- Use the recommended private-origin settings.
+Notes:
+
+- Create a CloudFront distribution for a single website.
+- Select the private S3 bucket as the origin.
+- Do not enable AWS WAF for the initial version because it is unnecessary for the current project and may add cost.
 - Set `index.html` as the default root object.
-- Skip AWS WAF for the current small project to avoid unnecessary cost.
 
 Status: Completed.
 
-## Step 5: Connect CloudFront to S3
+## Step 5: Connect CloudFront to S3 Origin
 
-- Use Origin Access Control.
+Notes:
+
+- Use CloudFront Origin Access Control.
 - Allow CloudFront to update the S3 bucket policy.
-- Permit the CloudFront distribution to read the website objects.
-- Keep CloudFront as the public entry point.
+- The bucket policy should grant the specific CloudFront distribution permission to read the website objects.
+- CloudFront should be the only public entry point.
 
 Status: Completed.
 
 ## Step 6: Configure HTTPS with ACM
 
-- The default CloudFront domain already supports HTTPS.
-- Request an ACM certificate when adding a custom domain.
-- Request the CloudFront certificate in `us-east-1`.
-- Validate the domain using DNS validation.
+Notes:
 
-Status: Planned.
+- The default CloudFront domain already provides HTTPS using an AWS-managed CloudFront certificate.
+- For a custom domain, request a public ACM certificate.
+- A certificate used by CloudFront must be requested or imported in `us-east-1`.
+- Validate ownership of the domain, preferably using DNS validation.
+- Attach the validated certificate to the CloudFront distribution.
+
+Status: Planned for a future phase.
 
 ## Step 7: Connect Custom Domain with Route 53
 
+Notes:
+
 - Register or use an existing domain.
 - Create or use a Route 53 hosted zone.
-- Add the domain as an alternate domain name in CloudFront.
-- Create an alias record pointing to CloudFront.
+- Add the custom domain as an alternate domain name in CloudFront.
+- Create an alias DNS record pointing the domain to the CloudFront distribution.
+- Verify that HTTPS works on the custom domain.
 
-Status: Planned.
+Status: Planned for a future phase.
 
 ## Step 8: Test Final URL
 
-- Confirm the CloudFront website loads.
-- Confirm `index.html` loads automatically.
-- Confirm the CSS styling loads.
-- Confirm HTTPS works.
-- Confirm direct S3 access returns Access Denied.
-- Test the website on desktop and mobile.
+Notes:
+
+- Confirm that the CloudFront URL loads successfully.
+- Confirm that `index.html` loads automatically.
+- Confirm that CSS styling loads.
+- Confirm that HTTPS is active.
+- Confirm that the direct S3 object URL returns Access Denied.
+- Test the page on desktop and mobile screen sizes.
 
 Status: Completed for the CloudFront domain.
 
 ## Security Decisions
 
+- The S3 bucket does not allow public write access.
 - The S3 bucket remains private.
-- Public write access is prohibited.
-- CloudFront serves the website.
-- Origin Access Control authorizes CloudFront to read S3.
+- CloudFront serves the website to users.
+- Origin Access Control authorizes CloudFront to read S3 objects.
 - HTTPS is enabled.
 - No AWS secrets are stored in GitHub.
-- Root is not used for everyday AWS work.
-- MFA and AWS cost alerts are enabled.
+- Root is not used for daily AWS work.
+- MFA protects both the root account and administrator user.
+- Cost alerts and an AWS Budget are enabled.
 
 ## Questions I Still Have
 
-- Which custom domain should be used?
-- How should deployments be automated?
-- How do CloudFront cache invalidations work?
-- When should the infrastructure be recreated with Terraform?
+- Which custom domain should be used for the portfolio?
+- How much will domain registration cost?
+- Should DNS be managed entirely through Route 53?
+- How will future website updates be automatically deployed?
+- How should CloudFront cache invalidations be automated?
+- When should the infrastructure be recreated using Terraform?
