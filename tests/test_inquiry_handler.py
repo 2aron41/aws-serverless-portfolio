@@ -432,6 +432,71 @@ class TestPrivacyBoundaries(unittest.TestCase):
 
         client.assert_not_called()
 
+    def test_invalid_request_logs_safe_validation_reason_without_visitor_content(
+        self,
+    ):
+        canary = "PRIVATE-VALIDATION-CANARY-DO-NOT-LOG"
+
+        payload = {
+            "name": "Private Validation Visitor",
+            "email": "private-invalid-email",
+            "message": (
+                "Please keep this validation request private "
+                + canary
+            ),
+        }
+
+        with (
+            patch.object(
+                handler.boto3,
+                "client",
+            ) as client,
+            self.assertLogs(
+                handler.LOGGER.name,
+                level="WARNING",
+            ) as captured,
+        ):
+            response = handler.lambda_handler(
+                make_event(payload),
+                None,
+            )
+
+        logs = "\n".join(captured.output)
+
+        self.assertEqual(
+            response["statusCode"],
+            400,
+        )
+
+        self.assertEqual(
+            json.loads(response["body"]),
+            {
+                "message": "Invalid inquiry request.",
+            },
+        )
+
+        self.assertIn(
+            "Email format is invalid.",
+            logs,
+        )
+
+        self.assertNotIn(
+            "Private Validation Visitor",
+            logs,
+        )
+
+        self.assertNotIn(
+            "private-invalid-email",
+            logs,
+        )
+
+        self.assertNotIn(
+            canary,
+            logs,
+        )
+
+        client.assert_not_called()
+
     def test_aws_failure_log_excludes_visitor_content(self):
         canary = "PRIVATE-CANARY-DO-NOT-LOG"
 

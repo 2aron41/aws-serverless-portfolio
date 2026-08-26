@@ -212,7 +212,12 @@ def lambda_handler(
 
     try:
         inquiry = parse_request(event)
-    except ValidationError:
+    except ValidationError as exc:
+        LOGGER.warning(
+            "Inquiry request failed validation: %s",
+            exc,
+        )
+
         return json_response(
             400,
             "Invalid inquiry request.",
