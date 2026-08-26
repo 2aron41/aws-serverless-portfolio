@@ -1,0 +1,12 @@
+# Controlled production Lambda rollback override.
+#
+# This file is intentionally not auto-loaded by Terraform.
+# Use it only with an explicit:
+#
+#   -var-file=rollback-v1.tfvars.example
+#
+# Removing the explicit -var-file returns Terraform to the normal
+# production configuration, where the live alias follows the latest
+# Terraform-published Lambda version.
+
+inquiry_lambda_alias_version = "1"
